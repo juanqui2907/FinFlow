@@ -28,6 +28,33 @@
     --mono: 'DM Mono', monospace;
   }
 
+  body.light {
+    --bg: #f4f4f0;
+    --surface: #ffffff;
+    --surface2: #ebebeb;
+    --border: rgba(0,0,0,0.08);
+    --text: #1a1a2e;
+    --muted: #888899;
+  }
+  body.light header {
+    background: linear-gradient(180deg, #f4f4f0 0%, transparent 100%);
+  }
+  body.light nav {
+    background: rgba(244,244,240,0.95);
+  }
+  body.light .balance-card { box-shadow: 0 4px 24px rgba(200,241,53,.25); }
+
+  .theme-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
   body {
@@ -504,10 +531,13 @@
 <!-- ╚══════════════╝ -->
 <div id="page-home" class="page active">
   <header>
-    <div class="greeting">Buenos días 👋</div>
+    <div class="greeting" id="greetingText">Buenos días 👋</div>
     <div class="header-row">
       <div class="page-title">Tu Balance</div>
-      <button class="month-pill" id="monthDisplay">Mar 2025</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="month-pill" id="monthDisplay">Mar 2026</button>
+        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+      </div>
     </div>
   </header>
 
@@ -566,8 +596,46 @@
     <div class="greeting">Análisis</div>
     <div class="header-row">
       <div class="page-title">Resumen</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="month-pill" id="resumenMonthDisplay" onclick="cycleResumenMonth(-1)">◀</button>
+        <span class="month-pill" id="resumenMonthLabel" style="cursor:default">Mar 2026</span>
+        <button class="month-pill" id="resumenMonthNext" onclick="cycleResumenMonth(1)">▶</button>
+      </div>
     </div>
   </header>
+
+  <!-- COMPARACIÓN MES VS MES ANTERIOR -->
+  <div class="section">
+    <div class="section-label">Este mes vs mes anterior</div>
+    <div class="projection-card" id="compareCard">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Mes anterior</div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--muted)" id="cmpPrevInc">Ing: $0</div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:3px" id="cmpPrevExp">Gas: $0</div>
+          <div style="font-family:var(--mono);font-size:15px;font-weight:700;margin-top:6px" id="cmpPrevBal">$0</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Este mes</div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--muted)" id="cmpCurInc">Ing: $0</div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:3px" id="cmpCurExp">Gas: $0</div>
+          <div style="font-family:var(--mono);font-size:15px;font-weight:700;margin-top:6px" id="cmpCurBal">$0</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--muted)">Diferencia en ahorro</span>
+        <span style="font-family:var(--mono);font-size:16px;font-weight:700" id="cmpDiff">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVOLUCIÓN DEL BALANCE -->
+  <div class="section">
+    <div class="section-label">Evolución del balance</div>
+    <div class="projection-card">
+      <canvas id="lineChart" height="120" style="width:100%"></canvas>
+    </div>
+  </div>
 
   <div class="section">
     <div class="section-label">Gastos por categoría</div>
@@ -593,8 +661,8 @@
     </div>
   </div>
 
-  <div class="section" style="margin-bottom:24px">
-    <div class="section-label">Todos los movimientos</div>
+  <div class="section">
+    <div class="section-label" id="txListLabel">Movimientos — Mar 2026</div>
     <div class="tx-list" id="allTxList">
       <div class="empty">
         <div class="empty-icon">🧾</div>
@@ -602,6 +670,12 @@
         <div class="empty-sub">Agrega tu primer ingreso o gasto</div>
       </div>
     </div>
+  </div>
+
+  <div class="section" style="margin-bottom:24px">
+    <button onclick="exportPDF()" style="width:100%;padding:15px;border-radius:16px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      📄 Exportar resumen en PDF
+    </button>
   </div>
 </div>
 
@@ -921,6 +995,26 @@
 let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"goals":[],"wallet":{"places":{"nequi":0,"pa":0},"billetes":{},"monedas":{}}}');
 let currentType = 'ingreso';
 
+// ─── THEME ───
+let isDark = localStorage.getItem('finflow-theme') !== 'light';
+function applyTheme() {
+  document.body.classList.toggle('light', !isDark);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = isDark ? '🌙' : '☀️';
+  localStorage.setItem('finflow-theme', isDark ? 'dark' : 'light');
+}
+function toggleTheme() { isDark = !isDark; applyTheme(); }
+
+// ─── RESUMEN MONTH FILTER ───
+let resumenDate = new Date();
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function resumenMonthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function resumenMonthLabel(d) { return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`; }
+function cycleResumenMonth(dir) {
+  resumenDate = new Date(resumenDate.getFullYear(), resumenDate.getMonth() + dir, 1);
+  renderResumen();
+}
+
 // ─── HELPERS ───
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
 const save = () => localStorage.setItem('finflow', JSON.stringify(state));
@@ -1131,22 +1225,175 @@ function formatDate(d) {
 
 // ─── RENDER RESUMEN ───
 function renderResumen() {
-  const txs = state.transactions;
-  // all list
+  const key = resumenMonthKey(resumenDate);
+  const label = resumenMonthLabel(resumenDate);
+  const allTxs = state.transactions;
+  const txs = allTxs.filter(t => t.date && t.date.startsWith(key));
+
+  // update header labels
+  document.getElementById('resumenMonthLabel').textContent = label;
+  document.getElementById('txListLabel').textContent = `Movimientos — ${label}`;
+
+  // filtered tx list
   const allList = document.getElementById('allTxList');
   if(!txs.length) {
-    allList.innerHTML = `<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">Sin movimientos</div><div class="empty-sub">Agrega tu primer ingreso o gasto</div></div>`;
+    allList.innerHTML = `<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">Sin movimientos en ${label}</div><div class="empty-sub">Navega a otro mes o agrega uno</div></div>`;
   } else {
     allList.innerHTML = txs.map((t,i) => txCard(t,i)).join('');
   }
 
-  // donut
+  // donut — solo del mes filtrado
   const cats = {};
   txs.filter(t=>t.type==='gasto').forEach(t => { cats[t.cat] = (cats[t.cat]||0)+t.amount; });
   drawDonut(cats);
 
   // bar chart
   drawBarChart();
+
+  // comparación mes vs anterior
+  const prevDate = new Date(resumenDate.getFullYear(), resumenDate.getMonth()-1, 1);
+  const prevKey = resumenMonthKey(prevDate);
+  const prevTxs = allTxs.filter(t => t.date && t.date.startsWith(prevKey));
+  const curInc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const curExp = txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+  const curBal = curInc - curExp;
+  const prevInc = prevTxs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const prevExp = prevTxs.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+  const prevBal = prevInc - prevExp;
+  const diff = curBal - prevBal;
+  document.getElementById('cmpPrevInc').textContent = 'Ing: ' + fmt(prevInc);
+  document.getElementById('cmpPrevExp').textContent = 'Gas: ' + fmt(prevExp);
+  document.getElementById('cmpPrevBal').textContent = fmt(prevBal);
+  document.getElementById('cmpPrevBal').style.color = prevBal >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('cmpCurInc').textContent = 'Ing: ' + fmt(curInc);
+  document.getElementById('cmpCurExp').textContent = 'Gas: ' + fmt(curExp);
+  document.getElementById('cmpCurBal').textContent = fmt(curBal);
+  document.getElementById('cmpCurBal').style.color = curBal >= 0 ? 'var(--green)' : 'var(--red)';
+  const diffEl = document.getElementById('cmpDiff');
+  diffEl.textContent = (diff >= 0 ? '▲ +' : '▼ ') + fmt(diff);
+  diffEl.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // línea de evolución
+  drawLineChart();
+}
+
+function drawLineChart() {
+  const canvas = document.getElementById('lineChart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 350;
+  canvas.width = W;
+  const H = 120;
+
+  const months = [];
+  const now = new Date();
+  for(let i=5;i>=0;i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({ key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: MONTH_NAMES[d.getMonth()] });
+  }
+
+  // balance acumulado hasta cada mes
+  let running = 0;
+  const points = months.map(m => {
+    const txsM = state.transactions.filter(t => t.date && t.date.startsWith(m.key));
+    const inc = txsM.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+    const exp = txsM.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+    running += inc - exp;
+    return { label: m.label, val: running };
+  });
+
+  const vals = points.map(p=>p.val);
+  const minV = Math.min(...vals, 0);
+  const maxV = Math.max(...vals, 1);
+  const pad = { t:16, b:24, l:8, r:8 };
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+
+  ctx.clearRect(0,0,W,H);
+
+  const toX = i => pad.l + (i/(points.length-1||1))*chartW;
+  const toY = v => pad.t + chartH - ((v-minV)/(maxV-minV||1))*chartH;
+
+  // fill
+  ctx.beginPath();
+  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toY(p.val)) : ctx.lineTo(toX(i),toY(p.val)));
+  ctx.lineTo(toX(points.length-1), H-pad.b);
+  ctx.lineTo(toX(0), H-pad.b);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(200,241,53,0.1)';
+  ctx.fill();
+
+  // line
+  ctx.beginPath();
+  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toY(p.val)) : ctx.lineTo(toX(i),toY(p.val)));
+  ctx.strokeStyle = '#c8f135';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // dots + labels
+  points.forEach((p,i) => {
+    ctx.beginPath();
+    ctx.arc(toX(i),toY(p.val),4,0,Math.PI*2);
+    ctx.fillStyle = '#c8f135';
+    ctx.fill();
+    ctx.fillStyle = isDark ? '#6b6b80' : '#888899';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.label, toX(i), H-6);
+  });
+}
+
+// ─── PDF EXPORT ───
+function exportPDF() {
+  const key = resumenMonthKey(resumenDate);
+  const label = resumenMonthLabel(resumenDate);
+  const txs = state.transactions.filter(t => t.date && t.date.startsWith(key));
+  const inc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const exp = txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+  const bal = inc - exp;
+
+  const rows = txs.map(t => `
+    <tr>
+      <td>${formatDate(t.date)}</td>
+      <td>${t.desc}</td>
+      <td>${t.cat.substring(3)}</td>
+      <td style="color:${t.type==='ingreso'?'#16a34a':'#dc2626'};font-weight:600">
+        ${t.type==='ingreso'?'+':'-'}${fmt(t.amount)}
+      </td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>FinFlow — ${label}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 32px; color: #1a1a2e; max-width: 600px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    .sub { color: #888; font-size: 14px; margin-bottom: 24px; }
+    .summary { display: flex; gap: 24px; margin-bottom: 28px; }
+    .sum-box { background: #f4f4f0; border-radius: 12px; padding: 14px 20px; flex: 1; }
+    .sum-label { font-size: 11px; text-transform: uppercase; color: #888; }
+    .sum-val { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 8px; border-bottom: 2px solid #eee; font-size: 11px; text-transform: uppercase; color: #888; }
+    td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
+    .footer { margin-top: 32px; font-size: 11px; color: #bbb; text-align: center; }
+  </style></head><body>
+  <h1>💸 FinFlow</h1>
+  <div class="sub">Resumen financiero — ${label}</div>
+  <div class="summary">
+    <div class="sum-box"><div class="sum-label">Ingresos</div><div class="sum-val" style="color:#16a34a">${fmt(inc)}</div></div>
+    <div class="sum-box"><div class="sum-label">Gastos</div><div class="sum-val" style="color:#dc2626">${fmt(exp)}</div></div>
+    <div class="sum-box"><div class="sum-label">Balance</div><div class="sum-val" style="color:${bal>=0?'#16a34a':'#dc2626'}">${fmt(bal)}</div></div>
+  </div>
+  <table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <div class="footer">Generado por FinFlow · ${new Date().toLocaleDateString('es-CO')}</div>
+  </body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 function drawDonut(cats) {
@@ -1461,8 +1708,12 @@ function recalcWallet() {
 const now = new Date();
 const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 document.getElementById('monthDisplay').textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+const h = now.getHours();
+const greet = h < 12 ? 'Buenos días 👋' : h < 18 ? 'Buenas tardes 👋' : 'Buenas noches 👋';
+document.getElementById('greetingText').textContent = greet;
 document.getElementById('txDate').value = today();
 setType('ingreso');
+applyTheme();
 renderHome();
 </script>
 </body>
