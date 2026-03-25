@@ -431,6 +431,33 @@
   }
   .mono-val { font-family: var(--mono); font-size: 16px; color: var(--text); font-weight: 600; }
 
+  /* ─── WALLET SUMMARY ─── */
+  .wallet-summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    overflow: hidden;
+  }
+  .ws-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .ws-label { color: var(--muted); }
+  .ws-val { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--text); }
+  .ws-efectivo { background: rgba(200,241,53,.04); }
+  .ws-sub { font-size: 10px; color: var(--muted); margin-left: 4px; }
+  .ws-divider { height: 1px; background: rgba(200,241,53,.2); }
+  .ws-total {
+    padding: 16px 18px;
+    font-size: 15px; font-weight: 700;
+    border-bottom: none;
+  }
+  .ws-total span:last-child {
+    font-family: var(--mono); font-size: 22px; font-weight: 800; color: var(--accent);
+  }
+
   .delete-btn {
     background: none; border: none; color: var(--muted); font-size: 16px;
     cursor: pointer; padding: 4px; margin-left: auto;
@@ -705,21 +732,15 @@
     </div>
   </header>
 
-  <!-- TOTALES POR LUGAR -->
+  <!-- CUENTAS DIGITALES -->
   <div class="section">
-    <div class="section-label">¿Dónde está tu plata?</div>
-    <div id="walletPlaces">
-      <!-- rendered by JS -->
-    </div>
-    <div class="wallet-total-card" id="walletGrandTotal">
-      <span>Total general</span>
-      <span class="wallet-total-amount" id="walletGrandTotalAmt">$0</span>
-    </div>
+    <div class="section-label">Cuentas digitales</div>
+    <div id="walletPlaces"></div>
   </div>
 
   <!-- BILLETES -->
   <div class="section">
-    <div class="section-label">Billetes en efectivo</div>
+    <div class="section-label">💵 Billetes</div>
     <div class="denom-grid" id="billeteGrid"></div>
     <div class="denom-subtotal">
       <span>Subtotal billetes</span>
@@ -728,12 +749,36 @@
   </div>
 
   <!-- MONEDAS -->
-  <div class="section" style="margin-bottom:24px">
-    <div class="section-label">Monedas</div>
+  <div class="section">
+    <div class="section-label">🪙 Monedas</div>
     <div class="denom-grid" id="monedaGrid"></div>
     <div class="denom-subtotal">
       <span>Subtotal monedas</span>
       <span class="mono-val" id="monedaSubtotal">$0</span>
+    </div>
+  </div>
+
+  <!-- RESUMEN FINAL -->
+  <div class="section" style="margin-bottom:24px">
+    <div class="section-label">Resumen</div>
+    <div class="wallet-summary-card">
+      <div class="ws-row">
+        <span class="ws-label">💜 Nequi</span>
+        <span class="ws-val" id="sum-nequi">$0</span>
+      </div>
+      <div class="ws-row">
+        <span class="ws-label">🟠 Pa</span>
+        <span class="ws-val" id="sum-pa">$0</span>
+      </div>
+      <div class="ws-row ws-efectivo">
+        <span class="ws-label">💵 Efectivo <span class="ws-sub">(billetes + monedas)</span></span>
+        <span class="ws-val" id="sum-efectivo">$0</span>
+      </div>
+      <div class="ws-divider"></div>
+      <div class="ws-row ws-total">
+        <span>Total general</span>
+        <span id="walletGrandTotalAmt">$0</span>
+      </div>
     </div>
   </div>
 </div>
@@ -758,7 +803,7 @@
 
 <script>
 // ─── STATE ───
-let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"goals":[],"wallet":{"places":{"nequi":0,"pa":0,"efectivo":0},"billetes":{},"monedas":{}}}');
+let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"goals":[],"wallet":{"places":{"nequi":0,"pa":0},"billetes":{},"monedas":{}}}');
 let currentType = 'ingreso';
 
 // ─── HELPERS ───
@@ -1098,9 +1143,8 @@ function renderFuturo() {
 
 // ─── BILLETERA ───
 const PLACES = [
-  { id: 'nequi',    name: 'Nequi',    icon: '💜', color: '#7b5ea7' },
-  { id: 'pa',       name: 'Pa',       icon: '🟠', color: '#f97316' },
-  { id: 'efectivo', name: 'Efectivo', icon: '💵', color: '#22c55e' },
+  { id: 'nequi', name: 'Nequi', icon: '💜', color: '#7b5ea7' },
+  { id: 'pa',    name: 'Pa',    icon: '🟠', color: '#f97316' },
 ];
 
 const BILLETES = [
@@ -1123,15 +1167,15 @@ const MONEDAS = [
 ];
 
 if (!state.wallet) {
-  state.wallet = {
-    places: { nequi: 0, pa: 0, efectivo: 0 },
-    billetes: {},
-    monedas: {}
-  };
+  state.wallet = { places: { nequi: 0, pa: 0 }, billetes: {}, monedas: {} };
+}
+// migrate old data if efectivo was stored
+if (state.wallet.places && state.wallet.places.efectivo !== undefined) {
+  delete state.wallet.places.efectivo;
 }
 
 function renderBilletera() {
-  // places
+  // cuentas digitales
   const placesEl = document.getElementById('walletPlaces');
   placesEl.innerHTML = PLACES.map(p => `
     <div class="place-card">
@@ -1142,7 +1186,6 @@ function renderBilletera() {
           <input class="place-input" type="number" inputmode="numeric"
             placeholder="0"
             value="${state.wallet.places[p.id] || ''}"
-            onchange="updatePlace('${p.id}', this.value)"
             oninput="updatePlace('${p.id}', this.value)">
         </div>
       </div>
@@ -1205,15 +1248,18 @@ function updateDenom(type, val, qty) {
 function recalcWallet() {
   const billTotal = BILLETES.reduce((s,b) => s + (state.wallet.billetes[b.val]||0)*b.val, 0);
   const monTotal  = MONEDAS.reduce((s,m)  => s + (state.wallet.monedas[m.val]||0)*m.val,  0);
-  const placeTotal = Object.values(state.wallet.places).reduce((s,v)=>s+v, 0);
-  const grand = placeTotal + billTotal + monTotal;
+  const efectivo  = billTotal + monTotal;
+  const nequi     = state.wallet.places.nequi || 0;
+  const pa        = state.wallet.places.pa    || 0;
+  const grand     = nequi + pa + efectivo;
 
-  const bsub = document.getElementById('billeteSubtotal');
-  const msub = document.getElementById('monedaSubtotal');
-  const gtot = document.getElementById('walletGrandTotalAmt');
-  if(bsub) bsub.textContent = fmt(billTotal);
-  if(msub) msub.textContent = fmt(monTotal);
-  if(gtot) gtot.textContent = fmt(grand);
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = fmt(val); };
+  set('billeteSubtotal',  billTotal);
+  set('monedaSubtotal',   monTotal);
+  set('sum-nequi',        nequi);
+  set('sum-pa',           pa);
+  set('sum-efectivo',     efectivo);
+  set('walletGrandTotalAmt', grand);
 }
 
 // ─── INIT ───
