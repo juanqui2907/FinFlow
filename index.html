@@ -465,6 +465,19 @@
   }
   .delete-btn:hover { color: var(--red); }
 
+  .tx-action-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 30px; height: 28px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+    padding: 0;
+  }
+  .tx-action-btn:active { background: var(--border); }
+
   .abonar-btn {
     width: 100%; margin-top: 12px;
     padding: 11px; border-radius: 12px;
@@ -757,7 +770,71 @@
 </div>
 
 <!-- ╔══════════════╗ -->
-<!-- ║     NAV      ║ -->
+<!-- ║  CONFIRMAR   ║ -->
+<!-- ╚══════════════╝ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;padding:8px 0 20px">
+      <div style="font-size:40px;margin-bottom:12px">🗑️</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:8px">¿Eliminar movimiento?</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5" id="confirmDesc"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="closeModal('confirmModal')"
+        style="padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer">
+        Cancelar
+      </button>
+      <button id="confirmDeleteBtn"
+        style="padding:14px;border-radius:14px;border:none;background:var(--red);color:#fff;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">
+        Sí, eliminar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════╗ -->
+<!-- ║    EDITAR    ║ -->
+<!-- ╚══════════════╝ -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar movimiento</div>
+    <div class="type-toggle">
+      <button class="type-btn" id="editBtnInc" onclick="setEditType('ingreso')">⬆ Ingreso</button>
+      <button class="type-btn" id="editBtnExp" onclick="setEditType('gasto')">⬇ Gasto</button>
+    </div>
+    <div class="field amount-field">
+      <label>Monto (COP)</label>
+      <input type="number" id="editAmount" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>Descripción</label>
+      <input type="text" id="editDesc" placeholder="Ej: Salario, Mercado...">
+    </div>
+    <div class="field">
+      <label>Categoría</label>
+      <select id="editCat">
+        <option value="💼 Trabajo">💼 Trabajo</option>
+        <option value="⭐ Saldo inicial">⭐ Saldo inicial</option>
+        <option value="🏠 Hogar">🏠 Hogar</option>
+        <option value="🍔 Comida">🍔 Comida</option>
+        <option value="🚗 Transporte">🚗 Transporte</option>
+        <option value="🎬 Entretenimiento">🎬 Entretenimiento</option>
+        <option value="💊 Salud">💊 Salud</option>
+        <option value="📚 Educación">📚 Educación</option>
+        <option value="👕 Ropa">👕 Ropa</option>
+        <option value="💰 Ahorro">💰 Ahorro</option>
+        <option value="📦 Otros">📦 Otros</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="editDate">
+    </div>
+    <button class="submit-btn" onclick="saveEdit()">Guardar cambios</button>
+  </div>
+</div>
 <!-- ╚══════════════╝ -->
 <!-- ╔══════════════╗ -->
 <!-- ║  BILLETERA   ║ -->
@@ -906,9 +983,63 @@ function saveTx() {
   renderHome();
 }
 
-function deleteTx(id) {
-  state.transactions = state.transactions.filter(t => t.id !== id);
+let pendingDeleteId = null;
+function confirmDelete(id) {
+  const t = state.transactions.find(t=>t.id===id);
+  if(!t) return;
+  pendingDeleteId = id;
+  const sign = t.type==='ingreso' ? '+' : '-';
+  document.getElementById('confirmDesc').innerHTML =
+    `<strong>${t.desc}</strong><br>${sign}${fmt(t.amount)} · ${formatDate(t.date)}`;
+  document.getElementById('confirmDeleteBtn').onclick = () => {
+    state.transactions = state.transactions.filter(t=>t.id!==pendingDeleteId);
+    save();
+    closeModal('confirmModal');
+    renderHome();
+    renderResumen();
+  };
+  openModal('confirmModal');
+}
+
+let editingId = null;
+let editType = 'ingreso';
+
+function openEdit(id) {
+  const t = state.transactions.find(t=>t.id===id);
+  if(!t) return;
+  editingId = id;
+  editType = t.type;
+  document.getElementById('editAmount').value = t.amount;
+  document.getElementById('editDesc').value = t.desc;
+  document.getElementById('editCat').value = t.cat;
+  document.getElementById('editDate').value = t.date;
+  setEditType(t.type);
+  openModal('editModal');
+}
+
+function setEditType(t) {
+  editType = t;
+  document.getElementById('editBtnInc').className = 'type-btn' + (t==='ingreso'?' active-inc':'');
+  document.getElementById('editBtnExp').className = 'type-btn' + (t==='gasto'?' active-exp':'');
+}
+
+function saveEdit() {
+  const amt = parseFloat(document.getElementById('editAmount').value);
+  const desc = document.getElementById('editDesc').value.trim();
+  if(!amt || amt<=0) { alert('Ingresa un monto válido'); return; }
+  if(!desc) { alert('Ingresa una descripción'); return; }
+  const idx = state.transactions.findIndex(t=>t.id===editingId);
+  if(idx===-1) return;
+  state.transactions[idx] = {
+    ...state.transactions[idx],
+    type: editType,
+    amount: amt,
+    desc,
+    cat: document.getElementById('editCat').value,
+    date: document.getElementById('editDate').value
+  };
   save();
+  closeModal('editModal');
   renderHome();
   renderResumen();
 }
@@ -984,7 +1115,10 @@ function txCard(t, i) {
       <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
       <div class="tx-date">${formatDate(t.date)}</div>
     </div>
-    <button class="delete-btn" onclick="deleteTx(${t.id})">×</button>
+    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+      <button class="tx-action-btn edit-btn" onclick="openEdit(${t.id})" title="Editar">✏️</button>
+      <button class="tx-action-btn trash-btn" onclick="confirmDelete(${t.id})" title="Eliminar">🗑️</button>
+    </div>
   </div>`;
 }
 
