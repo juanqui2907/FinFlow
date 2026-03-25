@@ -464,6 +464,24 @@
     transition: color .2s;
   }
   .delete-btn:hover { color: var(--red); }
+
+  .abonar-btn {
+    width: 100%; margin-top: 12px;
+    padding: 11px; border-radius: 12px;
+    background: rgba(200,241,53,.12);
+    border: 1px solid rgba(200,241,53,.25);
+    color: var(--accent); font-family: var(--font);
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: background .2s;
+  }
+  .abonar-btn:active { background: rgba(200,241,53,.22); }
+
+  .goal-done { border-color: rgba(34,197,94,.25) !important; }
+  .goal-badge {
+    font-size: 11px; background: rgba(34,197,94,.15);
+    color: #22c55e; border-radius: 6px; padding: 2px 7px;
+    margin-left: 6px; font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -715,6 +733,25 @@
       <input type="number" id="goalSaved" placeholder="0" inputmode="decimal">
     </div>
     <button class="submit-btn" onclick="saveGoal()">Crear meta</button>
+  </div>
+</div>
+
+<!-- ╔══════════════╗ -->
+<!-- ║  ABONAR MOD  ║ -->
+<!-- ╚══════════════╝ -->
+<div class="modal-overlay" id="abonarModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Abonar a meta</div>
+    <div style="background:var(--surface2);border-radius:14px;padding:14px 16px;margin-bottom:18px;">
+      <div style="font-size:16px;font-weight:700" id="abonarGoalName"></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;font-family:var(--mono)" id="abonarGoalInfo"></div>
+    </div>
+    <div class="field amount-field">
+      <label>¿Cuánto vas a abonar? (COP)</label>
+      <input type="number" id="abonarAmount" placeholder="0" inputmode="decimal">
+    </div>
+    <button class="submit-btn" onclick="saveAbonar()">Confirmar abono</button>
   </div>
 </div>
 
@@ -1067,26 +1104,50 @@ function renderMetas() {
   let html = '';
   state.goals.forEach(g => {
     const pct = Math.min(Math.round(g.saved/g.target*100),100);
-    const remaining = g.target - g.saved;
-    html += `<div class="goal-card">
+    const remaining = Math.max(g.target - g.saved, 0);
+    const done = g.saved >= g.target;
+    html += `<div class="goal-card ${done?'goal-done':''}">
       <div class="goal-header">
         <div class="goal-emoji">${g.emoji}</div>
-        <div>
-          <div class="goal-name">${g.name}</div>
+        <div style="flex:1">
+          <div class="goal-name">${g.name} ${done?'<span class="goal-badge">✅ Completada</span>':''}</div>
           <div class="goal-target">Meta: ${fmt(g.target)}</div>
         </div>
         <button class="delete-btn" onclick="deleteGoal(${g.id})">×</button>
       </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;${done?'background:#22c55e':''}"></div></div>
       <div class="goal-footer">
         <span class="saved">${fmt(g.saved)} ahorrado</span>
-        <span>${pct}% — Faltan ${fmt(remaining)}</span>
+        <span>${pct}%${!done?' — Faltan '+fmt(remaining):''}</span>
       </div>
+      ${!done?`<button class="abonar-btn" onclick="openAbonar(${g.id})">＋ Abonar</button>`:''}
     </div>`;
   });
   html += `<div class="goal-form-card" id="addGoalBtn">＋ Agregar nueva meta</div>`;
   c.innerHTML = html;
   document.getElementById('addGoalBtn').onclick = () => openModal('goalModal');
+}
+
+let abonarGoalId = null;
+function openAbonar(id) {
+  abonarGoalId = id;
+  const g = state.goals.find(g=>g.id===id);
+  document.getElementById('abonarGoalName').textContent = g.emoji + ' ' + g.name;
+  document.getElementById('abonarGoalInfo').textContent = fmt(g.saved) + ' de ' + fmt(g.target);
+  document.getElementById('abonarAmount').value = '';
+  openModal('abonarModal');
+}
+
+function saveAbonar() {
+  const amt = parseFloat(document.getElementById('abonarAmount').value);
+  if(!amt || amt<=0) { alert('Ingresa un monto válido'); return; }
+  const g = state.goals.find(g=>g.id===abonarGoalId);
+  if(!g) return;
+  g.saved = Math.min(g.saved + amt, g.target);
+  save();
+  closeModal('abonarModal');
+  renderMetas();
+  renderFuturo();
 }
 
 // ─── RENDER FUTURO ───
