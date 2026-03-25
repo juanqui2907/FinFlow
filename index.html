@@ -330,6 +330,107 @@
   .bar.exp { background: var(--red); }
   .bar-lbl { font-size: 9px; color: var(--muted); font-family: var(--mono); }
 
+  /* ─── BILLETERA ─── */
+  .place-card {
+    background: var(--surface);
+    border-radius: var(--card-r);
+    border: 1px solid var(--border);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .place-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .place-info { flex: 1; }
+  .place-name { font-size: 14px; font-weight: 700; }
+  .place-input-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .place-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .place-input:focus { border-color: var(--accent); }
+  .place-total { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+
+  .wallet-total-card {
+    background: linear-gradient(135deg, rgba(200,241,53,.15), rgba(200,241,53,.05));
+    border: 1px solid rgba(200,241,53,.3);
+    border-radius: var(--card-r);
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .wallet-total-amount { font-family: var(--mono); font-size: 22px; font-weight: 800; color: var(--accent); }
+
+  .denom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .denom-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .denom-face {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+  .denom-face span { color: var(--text); font-weight: 600; }
+  .denom-row { display: flex; align-items: center; gap: 8px; }
+  .denom-qty-input {
+    width: 56px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    text-align: center;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .denom-qty-input:focus { border-color: var(--accent); }
+  .denom-subtotal-val { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+
+  .denom-subtotal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .mono-val { font-family: var(--mono); font-size: 16px; color: var(--text); font-weight: 600; }
+
   .delete-btn {
     background: none; border: none; color: var(--muted); font-size: 16px;
     cursor: pointer; padding: 4px; margin-left: auto;
@@ -593,6 +694,50 @@
 <!-- ╔══════════════╗ -->
 <!-- ║     NAV      ║ -->
 <!-- ╚══════════════╝ -->
+<!-- ╔══════════════╗ -->
+<!-- ║  BILLETERA   ║ -->
+<!-- ╚══════════════╝ -->
+<div id="page-billetera" class="page">
+  <header>
+    <div class="greeting">Inventario</div>
+    <div class="header-row">
+      <div class="page-title">Billetera</div>
+    </div>
+  </header>
+
+  <!-- TOTALES POR LUGAR -->
+  <div class="section">
+    <div class="section-label">¿Dónde está tu plata?</div>
+    <div id="walletPlaces">
+      <!-- rendered by JS -->
+    </div>
+    <div class="wallet-total-card" id="walletGrandTotal">
+      <span>Total general</span>
+      <span class="wallet-total-amount" id="walletGrandTotalAmt">$0</span>
+    </div>
+  </div>
+
+  <!-- BILLETES -->
+  <div class="section">
+    <div class="section-label">Billetes en efectivo</div>
+    <div class="denom-grid" id="billeteGrid"></div>
+    <div class="denom-subtotal">
+      <span>Subtotal billetes</span>
+      <span class="mono-val" id="billeteSubtotal">$0</span>
+    </div>
+  </div>
+
+  <!-- MONEDAS -->
+  <div class="section" style="margin-bottom:24px">
+    <div class="section-label">Monedas</div>
+    <div class="denom-grid" id="monedaGrid"></div>
+    <div class="denom-subtotal">
+      <span>Subtotal monedas</span>
+      <span class="mono-val" id="monedaSubtotal">$0</span>
+    </div>
+  </div>
+</div>
+
 <nav>
   <button class="active" onclick="goto('home',this)">
     <span class="icon">🏠</span>Inicio
@@ -606,11 +751,14 @@
   <button onclick="goto('futuro',this)">
     <span class="icon">🔮</span>Futuro
   </button>
+  <button onclick="goto('billetera',this)">
+    <span class="icon">👛</span>Billetera
+  </button>
 </nav>
 
 <script>
 // ─── STATE ───
-let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"goals":[]}');
+let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"goals":[],"wallet":{"places":{"nequi":0,"pa":0,"efectivo":0},"billetes":{},"monedas":{}}}');
 let currentType = 'ingreso';
 
 // ─── HELPERS ───
@@ -632,6 +780,7 @@ function goto(page, el) {
   if(page==='futuro') renderFuturo();
   if(page==='metas') renderMetas();
   if(page==='home') renderHome();
+  if(page==='billetera') renderBilletera();
   window.scrollTo(0,0);
 }
 
@@ -945,6 +1094,126 @@ function renderFuturo() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ─── BILLETERA ───
+const PLACES = [
+  { id: 'nequi',    name: 'Nequi',    icon: '💜', color: '#7b5ea7' },
+  { id: 'pa',       name: 'Pa',       icon: '🟠', color: '#f97316' },
+  { id: 'efectivo', name: 'Efectivo', icon: '💵', color: '#22c55e' },
+];
+
+const BILLETES = [
+  { val: 100000, label: '$100.000' },
+  { val: 50000,  label: '$50.000'  },
+  { val: 20000,  label: '$20.000'  },
+  { val: 10000,  label: '$10.000'  },
+  { val: 5000,   label: '$5.000'   },
+  { val: 2000,   label: '$2.000'   },
+  { val: 1000,   label: '$1.000'   },
+  { val: 500,    label: '$500'     },
+];
+
+const MONEDAS = [
+  { val: 1000, label: '$1.000' },
+  { val: 500,  label: '$500'   },
+  { val: 200,  label: '$200'   },
+  { val: 100,  label: '$100'   },
+  { val: 50,   label: '$50'    },
+];
+
+if (!state.wallet) {
+  state.wallet = {
+    places: { nequi: 0, pa: 0, efectivo: 0 },
+    billetes: {},
+    monedas: {}
+  };
+}
+
+function renderBilletera() {
+  // places
+  const placesEl = document.getElementById('walletPlaces');
+  placesEl.innerHTML = PLACES.map(p => `
+    <div class="place-card">
+      <div class="place-icon" style="background:${p.color}22">${p.icon}</div>
+      <div class="place-info">
+        <div class="place-name">${p.name}</div>
+        <div class="place-input-row">
+          <input class="place-input" type="number" inputmode="numeric"
+            placeholder="0"
+            value="${state.wallet.places[p.id] || ''}"
+            onchange="updatePlace('${p.id}', this.value)"
+            oninput="updatePlace('${p.id}', this.value)">
+        </div>
+      </div>
+      <div class="place-total" id="place-total-${p.id}">${fmt(state.wallet.places[p.id]||0)}</div>
+    </div>
+  `).join('');
+
+  // billetes
+  const billGrid = document.getElementById('billeteGrid');
+  billGrid.innerHTML = BILLETES.map(b => {
+    const qty = state.wallet.billetes[b.val] || 0;
+    const sub = qty * b.val;
+    return `<div class="denom-card">
+      <div class="denom-face">Billete <span>${b.label}</span></div>
+      <div class="denom-row">
+        <input class="denom-qty-input" type="number" inputmode="numeric" min="0"
+          placeholder="0" value="${qty||''}"
+          oninput="updateDenom('billetes','${b.val}',this.value)">
+        <span class="denom-subtotal-val" id="bsub-${b.val}">${sub>0?fmt(sub):''}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // monedas
+  const monGrid = document.getElementById('monedaGrid');
+  monGrid.innerHTML = MONEDAS.map(m => {
+    const qty = state.wallet.monedas[m.val] || 0;
+    const sub = qty * m.val;
+    return `<div class="denom-card">
+      <div class="denom-face">Moneda <span>${m.label}</span></div>
+      <div class="denom-row">
+        <input class="denom-qty-input" type="number" inputmode="numeric" min="0"
+          placeholder="0" value="${qty||''}"
+          oninput="updateDenom('monedas','${m.val}',this.value)">
+        <span class="denom-subtotal-val" id="msub-${m.val}">${sub>0?fmt(sub):''}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  recalcWallet();
+}
+
+function updatePlace(id, val) {
+  state.wallet.places[id] = parseFloat(val)||0;
+  document.getElementById('place-total-'+id).textContent = fmt(state.wallet.places[id]);
+  recalcWallet();
+  save();
+}
+
+function updateDenom(type, val, qty) {
+  state.wallet[type][val] = parseInt(qty)||0;
+  const sub = state.wallet[type][val] * parseInt(val);
+  const prefix = type==='billetes' ? 'bsub' : 'msub';
+  const el = document.getElementById(`${prefix}-${val}`);
+  if(el) el.textContent = sub>0 ? fmt(sub) : '';
+  recalcWallet();
+  save();
+}
+
+function recalcWallet() {
+  const billTotal = BILLETES.reduce((s,b) => s + (state.wallet.billetes[b.val]||0)*b.val, 0);
+  const monTotal  = MONEDAS.reduce((s,m)  => s + (state.wallet.monedas[m.val]||0)*m.val,  0);
+  const placeTotal = Object.values(state.wallet.places).reduce((s,v)=>s+v, 0);
+  const grand = placeTotal + billTotal + monTotal;
+
+  const bsub = document.getElementById('billeteSubtotal');
+  const msub = document.getElementById('monedaSubtotal');
+  const gtot = document.getElementById('walletGrandTotalAmt');
+  if(bsub) bsub.textContent = fmt(billTotal);
+  if(msub) msub.textContent = fmt(monTotal);
+  if(gtot) gtot.textContent = fmt(grand);
 }
 
 // ─── INIT ───
