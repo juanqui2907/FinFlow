@@ -1531,15 +1531,10 @@ function saveAbonar() {
 // ─── RENDER FUTURO ───
 function renderFuturo() {
   const txs = state.transactions;
-  // excluir "Saldo inicial" de proyecciones
-  const realTxs = txs.filter(t => t.cat !== '⭐ Saldo inicial');
-  const allInc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
-  const allExp = txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
-  const currentBalance = allInc - allExp;
-
-  const inc = realTxs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
-  const exp = realTxs.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
-  const months = realTxs.length ? [...new Set(realTxs.map(t=>t.date?.substring(0,7)))].filter(Boolean).length || 1 : 1;
+  const inc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const exp = txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+  const currentBalance = inc - exp;
+  const months = txs.length ? [...new Set(txs.map(t=>t.date?.substring(0,7)))].filter(Boolean).length || 1 : 1;
   const avgInc = inc / months;
   const avgExp = exp / months;
   const avgSaving = avgInc - avgExp;
@@ -1554,7 +1549,7 @@ function renderFuturo() {
   // insight
   const rate = avgInc>0 ? Math.round((avgSaving/avgInc)*100) : 0;
   let insight='', title='';
-  if(!realTxs.length) { title='💡 Empieza a registrar'; insight='Agrega tus ingresos y gastos para ver un análisis personalizado de tus finanzas.'; }
+  if(!txs.length) { title='💡 Empieza a registrar'; insight='Agrega tus ingresos y gastos para ver un análisis personalizado de tus finanzas.'; }
   else if(rate<0) { title='⚠️ Gastos mayores a ingresos'; insight=`Estás gastando ${fmt(Math.abs(avgSaving))} más de lo que ingresas mensualmente. Considera reducir gastos en entretenimiento o transporte.`; }
   else if(rate<10) { title='📌 Tasa de ahorro baja'; insight=`Estás ahorrando solo ${rate}% de tus ingresos. Lo ideal es al menos 20%. Pequeños ajustes en gastos diarios pueden hacer gran diferencia.`; }
   else if(rate<20) { title='👍 Vas por buen camino'; insight=`Ahorras el ${rate}% de tus ingresos. ¡Bien! Intenta llegar al 20-30% para alcanzar tus metas más rápido.`; }
