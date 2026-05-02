@@ -9,13 +9,6 @@ App web progresiva (PWA) para gestionar tus finanzas personales desde el celular
 - **Metas** — Crea objetivos de ahorro con barra de progreso
 - **Futuro** — Proyecciones a 1, 3, 6 y 12 meses + recomendaciones personalizadas
 
-## 🚀 Cómo subir a GitHub Pages
-
-1. Crea un repositorio en GitHub (ej: `finflow`)
-2. Sube los archivos `index.html` y `manifest.json`
-3. Ve a **Settings → Pages → Source: main branch → Save**
-4. Tu app estará en: `https://tu-usuario.github.io/finflow`
-
 ## 📱 Instalar en el celular
 
 ### Android (Chrome)
