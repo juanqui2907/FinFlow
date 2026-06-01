@@ -522,6 +522,35 @@
     color: #22c55e; border-radius: 6px; padding: 2px 7px;
     margin-left: 6px; font-weight: 600;
   }
+
+  /* ─── HOME: GASTOS POR CATEGORÍA ─── */
+  .cat-overview { display: flex; align-items: center; gap: 18px; }
+  .cat-legend { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .cat-legend-top { display: flex; align-items: center; gap: 8px; }
+  .cat-legend-dot { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+  .cat-legend-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-legend-pct { margin-left: auto; font-size: 12px; color: var(--muted); font-family: var(--mono); flex-shrink: 0; }
+  .cat-legend-amt { font-size: 18px; font-weight: 800; font-family: var(--mono); margin-top: 2px; letter-spacing: -.5px; }
+  .cat-donut-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  .cat-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; padding: 0 10px; }
+  .cdc-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .cdc-amount { font-size: 13px; font-weight: 800; font-family: var(--mono); margin-top: 2px; line-height: 1.1; }
+
+  /* ─── PRESUPUESTO POR CATEGORÍA ─── */
+  .budget-row + .budget-row { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .budget-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 8px; }
+  .budget-name { font-size: 14px; font-weight: 600; }
+  .budget-nums { font-family: var(--mono); font-size: 13px; color: var(--muted); flex-shrink: 0; }
+  .budget-foot { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 6px; }
+
+  /* ─── FUTURO: CATEGORÍAS ─── */
+  .fcat-row + .fcat-row { margin-top: 14px; }
+  .fcat-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; }
+  .fcat-name { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+  .fcat-avg { font-family: var(--mono); font-size: 13px; color: var(--text); flex-shrink: 0; }
+  .fcat-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .fcat-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+  .fcat-annual { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -572,6 +601,24 @@
         <div class="stat-icon">📉</div>
         <div class="stat-lbl">Mayor gasto</div>
         <div class="stat-val exp" id="topExpense">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Gastos por categoría · este mes</div>
+    <div class="projection-card">
+      <div class="cat-overview">
+        <div class="cat-legend" id="homeCatLegend">
+          <div style="color:var(--muted);font-size:13px">Sin gastos este mes</div>
+        </div>
+        <div class="cat-donut-wrap">
+          <canvas id="homeDonut" width="120" height="120"></canvas>
+          <div class="cat-donut-center">
+            <span class="cdc-label">Total gastos</span>
+            <span class="cdc-amount" id="homeCatTotal">$0</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -662,6 +709,14 @@
   </div>
 
   <div class="section">
+    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Presupuesto por categoría</span>
+      <button class="month-pill" onclick="openBudgetModal()" style="padding:5px 12px;cursor:pointer">⚙ Editar</button>
+    </div>
+    <div class="projection-card" id="budgetCard"></div>
+  </div>
+
+  <div class="section">
     <div class="section-label" id="txListLabel">Movimientos — Mar 2026</div>
     <div class="tx-list" id="allTxList">
       <div class="empty">
@@ -738,6 +793,13 @@
         <span class="proj-month">+12 meses</span>
         <span class="proj-amount" id="proj12">$0</span>
       </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Gastos por categoría · promedio mensual</div>
+    <div class="projection-card" id="futureCatCard">
+      <div style="color:var(--muted);font-size:13px">Agrega gastos para ver el desglose.</div>
     </div>
   </div>
 
@@ -821,6 +883,19 @@
       <input type="number" id="goalSaved" placeholder="0" inputmode="decimal">
     </div>
     <button class="submit-btn" onclick="saveGoal()">Crear meta</button>
+  </div>
+</div>
+
+<!-- ╔══════════════╗ -->
+<!-- ║ BUDGET MODAL ║ -->
+<!-- ╚══════════════╝ -->
+<div class="modal-overlay" id="budgetModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Presupuesto mensual</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5">Define un límite de gasto por categoría. Déjalo vacío para no fijar límite.</div>
+    <div id="budgetFields" style="max-height:48vh;overflow-y:auto;margin:0 -2px"></div>
+    <button class="submit-btn" onclick="saveBudgets()">Guardar presupuestos</button>
   </div>
 </div>
 
@@ -994,6 +1069,29 @@
 // ─── STATE ───
 let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"goals":[],"wallet":{"places":{"nequi":0,"pa":0},"billetes":{},"monedas":{}}}');
 let currentType = 'ingreso';
+if(!state.budgets) state.budgets = {};
+
+const EXPENSE_CATS = ['🏠 Hogar','🍔 Comida','🚗 Transporte','🎬 Entretenimiento','💊 Salud','📚 Educación','👕 Ropa','📦 Otros'];
+const CAT_COLORS = ['#c8f135','#7b5ea7','#ff5c5c','#60a5fa','#f97316','#22d3ee','#a78bfa','#f472b6','#34d399','#fbbf24'];
+const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
+
+function drawDonutOn(canvas, entries, total) {
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width, cx = size/2, cy = size/2;
+  const r = size/2 - 4, inner = r * 0.62;
+  ctx.clearRect(0,0,size,size);
+  let a = -Math.PI/2;
+  entries.forEach(([cat,val],i) => {
+    const slice = (val/total) * Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,a,a+slice); ctx.closePath();
+    ctx.fillStyle = catColor(i); ctx.fill();
+    a += slice;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,inner,0,Math.PI*2);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#13131a';
+  ctx.fill();
+}
 
 // ─── THEME ───
 let isDark = localStorage.getItem('finflow-theme') !== 'light';
@@ -1185,6 +1283,8 @@ function renderHome() {
   document.getElementById('topIncome').textContent = incTxs.length ? fmt(Math.max(...incTxs.map(t=>t.amount))) : '—';
   document.getElementById('topExpense').textContent = expTxs.length ? fmt(Math.max(...expTxs.map(t=>t.amount))) : '—';
 
+  renderHomeCategories();
+
   // recent txs
   const list = document.getElementById('recentTxList');
   const recent = txs.slice(0,8);
@@ -1223,6 +1323,40 @@ function formatDate(d) {
   return `${parts[2]} ${months[parseInt(parts[1])-1]}`;
 }
 
+// ─── HOME: GASTOS POR CATEGORÍA ───
+function renderHomeCategories() {
+  const now = new Date();
+  const curKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const cats = {};
+  state.transactions
+    .filter(t => t.type==='gasto' && t.date && t.date.startsWith(curKey))
+    .forEach(t => { cats[t.cat] = (cats[t.cat]||0) + t.amount; });
+
+  const total = Object.values(cats).reduce((s,v)=>s+v,0);
+  const legend = document.getElementById('homeCatLegend');
+  const canvas = document.getElementById('homeDonut');
+  document.getElementById('homeCatTotal').textContent = fmt(total);
+
+  if(!total) {
+    legend.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin gastos este mes</div>';
+    canvas.getContext('2d').clearRect(0,0,120,120);
+    return;
+  }
+
+  const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  drawDonutOn(canvas, entries, total);
+
+  legend.innerHTML = entries.slice(0,5).map(([cat,val],i) => `
+    <div class="cat-legend-item">
+      <div class="cat-legend-top">
+        <span class="cat-legend-dot" style="background:${catColor(i)}"></span>
+        <span class="cat-legend-name">${cat.substring(3)}</span>
+        <span class="cat-legend-pct">${Math.round(val/total*100)}%</span>
+      </div>
+      <div class="cat-legend-amt">${fmt(val)}</div>
+    </div>`).join('');
+}
+
 // ─── RENDER RESUMEN ───
 function renderResumen() {
   const key = resumenMonthKey(resumenDate);
@@ -1246,6 +1380,9 @@ function renderResumen() {
   const cats = {};
   txs.filter(t=>t.type==='gasto').forEach(t => { cats[t.cat] = (cats[t.cat]||0)+t.amount; });
   drawDonut(cats);
+
+  // presupuesto por categoría — del mes filtrado
+  renderBudgets(txs);
 
   // bar chart
   drawBarChart();
@@ -1396,6 +1533,61 @@ function exportPDF() {
   setTimeout(() => win.print(), 400);
 }
 
+// ─── PRESUPUESTO POR CATEGORÍA ───
+function renderBudgets(txs) {
+  const card = document.getElementById('budgetCard');
+  const spent = {};
+  txs.filter(t=>t.type==='gasto').forEach(t => { spent[t.cat] = (spent[t.cat]||0)+t.amount; });
+
+  const cats = EXPENSE_CATS.filter(c => state.budgets[c] || spent[c]);
+  if(!cats.length) {
+    card.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:8px 0">Sin presupuestos. Toca “Editar” para fijar un límite mensual por categoría.</div>';
+    return;
+  }
+
+  card.innerHTML = cats.map(c => {
+    const budget = state.budgets[c] || 0;
+    const used = spent[c] || 0;
+    const pct = budget>0 ? Math.round(used/budget*100) : null;
+    const over = budget>0 && used>budget;
+    const width = budget>0 ? Math.min(used/budget*100,100) : 0;
+    let barColor = 'var(--green)';
+    if(pct!==null) { if(pct>=100) barColor='var(--red)'; else if(pct>=80) barColor='#fbbf24'; }
+    let foot;
+    if(budget<=0) foot = '<span style="color:var(--muted)">Sin límite definido</span>';
+    else if(over) foot = `<span style="color:var(--red)">Excedido por ${fmt(used-budget)}</span>`;
+    else foot = `${pct}% usado · quedan ${fmt(budget-used)}`;
+    return `<div class="budget-row">
+      <div class="budget-head">
+        <span class="budget-name">${c}</span>
+        <span class="budget-nums">${fmt(used)}${budget>0?` / ${fmt(budget)}`:''}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${width}%;background:${barColor}"></div></div>
+      <div class="budget-foot">${foot}</div>
+    </div>`;
+  }).join('');
+}
+
+function openBudgetModal() {
+  document.getElementById('budgetFields').innerHTML = EXPENSE_CATS.map((c,i) => `
+    <div class="field">
+      <label>${c}</label>
+      <input type="number" inputmode="decimal" id="bud-${i}" placeholder="Sin límite" value="${state.budgets[c]||''}">
+    </div>`).join('');
+  openModal('budgetModal');
+}
+
+function saveBudgets() {
+  EXPENSE_CATS.forEach((c,i) => {
+    const v = parseFloat(document.getElementById('bud-'+i).value);
+    if(v && v>0) state.budgets[c] = v;
+    else delete state.budgets[c];
+  });
+  save();
+  closeModal('budgetModal');
+  renderResumen();
+}
+
 function drawDonut(cats) {
   const canvas = document.getElementById('donutChart');
   const ctx = canvas.getContext('2d');
@@ -1408,33 +1600,12 @@ function drawDonut(cats) {
     return;
   }
 
-  const colors = ['#c8f135','#7b5ea7','#ff5c5c','#60a5fa','#f97316','#22d3ee','#a78bfa'];
   const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  
-  ctx.clearRect(0,0,110,110);
-  let startAngle = -Math.PI/2;
-  const cx=55, cy=55, r=42, inner=26;
-
-  entries.forEach(([cat,val],i) => {
-    const slice = (val/total) * Math.PI*2;
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,startAngle,startAngle+slice);
-    ctx.closePath();
-    ctx.fillStyle = colors[i%colors.length];
-    ctx.fill();
-    startAngle += slice;
-  });
-
-  // inner hole
-  ctx.beginPath();
-  ctx.arc(cx,cy,inner,0,Math.PI*2);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#13131a';
-  ctx.fill();
+  drawDonutOn(canvas, entries, total);
 
   legend.innerHTML = entries.slice(0,5).map(([cat,val],i) =>
     `<div class="legend-item">
-      <div class="legend-dot" style="background:${colors[i%colors.length]}"></div>
+      <div class="legend-dot" style="background:${catColor(i)}"></div>
       <span style="font-size:12px">${cat.substring(3)}</span>
       <span class="legend-pct">${Math.round(val/total*100)}%</span>
     </div>`
@@ -1557,6 +1728,8 @@ function renderFuturo() {
 
   document.getElementById('mainInsight').innerHTML = `<div class="insight-title">${title}</div><div class="insight-text">${insight}</div>`;
 
+  renderFutureCategories(months);
+
   // goals en futuro
   const fg = document.getElementById('futureGoals');
   if(!state.goals.length) { fg.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">Agrega metas en la sección Metas.</div>'; return; }
@@ -1576,6 +1749,33 @@ function renderFuturo() {
       <div class="goal-footer">
         <span>${pct}%</span><span>Faltan ${fmt(remaining)}</span>
       </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── FUTURO: GASTOS POR CATEGORÍA ───
+function renderFutureCategories(months) {
+  const card = document.getElementById('futureCatCard');
+  const exps = state.transactions.filter(t=>t.type==='gasto');
+  if(!exps.length) {
+    card.innerHTML = '<div style="color:var(--muted);font-size:13px">Agrega gastos para ver el desglose.</div>';
+    return;
+  }
+  const cats = {};
+  exps.forEach(t => { cats[t.cat] = (cats[t.cat]||0)+t.amount; });
+  const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const maxAvg = Math.max(...entries.map(([,v])=>v/months));
+
+  card.innerHTML = entries.map(([cat,total],i) => {
+    const avg = total/months;
+    const w = maxAvg>0 ? Math.round(avg/maxAvg*100) : 0;
+    return `<div class="fcat-row">
+      <div class="fcat-head">
+        <span class="fcat-name"><span class="cat-legend-dot" style="background:${catColor(i)}"></span>${cat.substring(3)}</span>
+        <span class="fcat-avg">${fmt(avg)}/mes</span>
+      </div>
+      <div class="fcat-bar"><div class="fcat-fill" style="width:${w}%;background:${catColor(i)}"></div></div>
+      <div class="fcat-annual">≈ ${fmt(avg*12)} al año</div>
     </div>`;
   }).join('');
 }
