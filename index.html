@@ -534,7 +534,7 @@
   .cat-donut-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
   .cat-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; padding: 0 10px; }
   .cdc-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  .cdc-amount { font-size: 13px; font-weight: 800; font-family: var(--mono); margin-top: 2px; line-height: 1.1; }
+  .cdc-amount { font-size: 13px; font-weight: 800; font-family: var(--mono); margin-top: 2px; line-height: 1.1; color: var(--text); }
 
   /* ─── PRESUPUESTO POR CATEGORÍA ─── */
   .budget-row + .budget-row { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
@@ -1096,7 +1096,7 @@ function drawDonutOn(canvas, entries, total) {
     a += slice;
   });
   ctx.beginPath(); ctx.arc(cx,cy,inner,0,Math.PI*2);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#13131a';
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface').trim() || '#13131a';
   ctx.fill();
 }
 
@@ -1108,7 +1108,15 @@ function applyTheme() {
   if(btn) btn.textContent = isDark ? '🌙' : '☀️';
   localStorage.setItem('finflow-theme', isDark ? 'dark' : 'light');
 }
-function toggleTheme() { isDark = !isDark; applyTheme(); }
+function toggleTheme() {
+  isDark = !isDark;
+  applyTheme();
+  // Redibujar para que el centro del donut tome el color del tema nuevo
+  setTimeout(() => {
+    renderHome();
+    if (document.getElementById('page-resumen')?.classList.contains('active')) renderResumen();
+  }, 0);
+}
 
 // ─── RESUMEN MONTH FILTER ───
 let resumenDate = new Date();
@@ -1454,42 +1462,55 @@ function drawLineChart() {
   const vals = points.map(p=>p.val);
   const minV = Math.min(...vals, 0);
   const maxV = Math.max(...vals, 1);
-  const pad = { t:16, b:24, l:8, r:8 };
+  const dotR = 4;
+  const pad = { t: dotR + 8, b: 26, l: dotR + 10, r: dotR + 10 };
   const chartW = W - pad.l - pad.r;
   const chartH = H - pad.t - pad.b;
 
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0, 0, W, H);
 
-  const toX = i => pad.l + (i/(points.length-1||1))*chartW;
-  const toY = v => pad.t + chartH - ((v-minV)/(maxV-minV||1))*chartH;
+  const toX = i => pad.l + (points.length > 1 ? (i / (points.length - 1)) * chartW : chartW / 2);
+  const toY = v => pad.t + chartH - ((v - minV) / (maxV - minV || 1)) * chartH;
 
-  // fill
+  // clip so nothing ever exits the chart box
+  ctx.save();
   ctx.beginPath();
-  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toY(p.val)) : ctx.lineTo(toX(i),toY(p.val)));
-  ctx.lineTo(toX(points.length-1), H-pad.b);
-  ctx.lineTo(toX(0), H-pad.b);
+  ctx.rect(pad.l - dotR, pad.t - dotR, chartW + dotR * 2, chartH + dotR * 2);
+  ctx.clip();
+
+  // fill under line
+  ctx.beginPath();
+  points.forEach((p, i) => i === 0 ? ctx.moveTo(toX(i), toY(p.val)) : ctx.lineTo(toX(i), toY(p.val)));
+  ctx.lineTo(toX(points.length - 1), pad.t + chartH);
+  ctx.lineTo(toX(0), pad.t + chartH);
   ctx.closePath();
   ctx.fillStyle = 'rgba(200,241,53,0.1)';
   ctx.fill();
 
   // line
   ctx.beginPath();
-  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toY(p.val)) : ctx.lineTo(toX(i),toY(p.val)));
+  points.forEach((p, i) => i === 0 ? ctx.moveTo(toX(i), toY(p.val)) : ctx.lineTo(toX(i), toY(p.val)));
   ctx.strokeStyle = '#c8f135';
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   ctx.stroke();
 
-  // dots + labels
-  points.forEach((p,i) => {
+  // dots
+  points.forEach((p, i) => {
     ctx.beginPath();
-    ctx.arc(toX(i),toY(p.val),4,0,Math.PI*2);
+    ctx.arc(toX(i), toY(p.val), dotR, 0, Math.PI * 2);
     ctx.fillStyle = '#c8f135';
     ctx.fill();
-    ctx.fillStyle = isDark ? '#6b6b80' : '#888899';
-    ctx.font = '9px DM Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(p.label, toX(i), H-6);
+  });
+
+  ctx.restore();
+
+  // labels outside clip so renderizan en el padding inferior
+  ctx.fillStyle = isDark ? '#6b6b80' : '#888899';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  points.forEach((p, i) => {
+    ctx.fillText(p.label, toX(i), H - 6);
   });
 }
 
@@ -1812,7 +1833,6 @@ const MONEDAS = [
   { val: 500,  label: '$500'   },
   { val: 200,  label: '$200'   },
   { val: 100,  label: '$100'   },
-  { val: 50,   label: '$50'    },
 ];
 
 if (!state.wallet) {
