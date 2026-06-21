@@ -680,7 +680,7 @@
   <div class="section">
     <div class="section-label">Evolución del balance</div>
     <div class="projection-card">
-      <canvas id="lineChart" height="120" style="width:100%"></canvas>
+      <canvas id="lineChart" height="120"></canvas>
     </div>
   </div>
 
@@ -1426,7 +1426,7 @@ function renderResumen() {
   diffEl.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
 
   // línea de evolución
-  drawLineChart();
+  requestAnimationFrame(drawLineChart);
 }
 
 function drawLineChart() {
@@ -1434,7 +1434,9 @@ function drawLineChart() {
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  const W = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 390;
+  // Leer ancho del padre para garantizar el 100% real en móvil
+  const container = canvas.parentElement;
+  const W = (container ? container.getBoundingClientRect().width : 0) || canvas.offsetWidth || 320;
   const H = 120;
   canvas.width = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
