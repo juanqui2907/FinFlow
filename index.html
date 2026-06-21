@@ -680,7 +680,7 @@
   <div class="section">
     <div class="section-label">Evolución del balance</div>
     <div class="projection-card">
-      <canvas id="lineChart" height="120"></canvas>
+      <canvas id="lineChart" style="width:100%;display:block"></canvas>
     </div>
   </div>
 
@@ -1426,23 +1426,27 @@ function renderResumen() {
   diffEl.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
 
   // línea de evolución
-  requestAnimationFrame(drawLineChart);
+  drawLineChart();
 }
 
 function drawLineChart() {
   const canvas = document.getElementById('lineChart');
   if(!canvas) return;
-  const ctx = canvas.getContext('2d');
+
+  // Dejar que el CSS controle el ancho (width:100%), solo ajustar el buffer interno por DPR
   const dpr = window.devicePixelRatio || 1;
-  // Leer ancho del padre para garantizar el 100% real en móvil
-  const container = canvas.parentElement;
-  const W = (container ? container.getBoundingClientRect().width : 0) || canvas.offsetWidth || 320;
+  const W = canvas.clientWidth || canvas.parentElement?.clientWidth || 320;
   const H = 120;
-  canvas.width = Math.round(W * dpr);
-  canvas.height = Math.round(H * dpr);
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.scale(dpr, dpr);
+
+  // Solo reasignar si cambió (evita flush de layout innecesario)
+  if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.height = H + 'px';
+  }
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const months = [];
   const now = new Date();
