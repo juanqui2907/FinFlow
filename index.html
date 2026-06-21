@@ -1076,8 +1076,15 @@ const CAT_COLORS = ['#c8f135','#7b5ea7','#ff5c5c','#60a5fa','#f97316','#22d3ee',
 const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
 
 function drawDonutOn(canvas, entries, total) {
+  const dpr = window.devicePixelRatio || 1;
+  const cssSize = canvas.getBoundingClientRect().width || parseInt(canvas.getAttribute('width')) || 120;
+  canvas.width = Math.round(cssSize * dpr);
+  canvas.height = Math.round(cssSize * dpr);
+  canvas.style.width = cssSize + 'px';
+  canvas.style.height = cssSize + 'px';
   const ctx = canvas.getContext('2d');
-  const size = canvas.width, cx = size/2, cy = size/2;
+  ctx.scale(dpr, dpr);
+  const size = cssSize, cx = size/2, cy = size/2;
   const r = size/2 - 4, inner = r * 0.62;
   ctx.clearRect(0,0,size,size);
   let a = -Math.PI/2;
@@ -1418,9 +1425,14 @@ function drawLineChart() {
   const canvas = document.getElementById('lineChart');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 350;
-  canvas.width = W;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 390;
   const H = 120;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
 
   const months = [];
   const now = new Date();
@@ -1910,6 +1922,16 @@ document.getElementById('txDate').value = today();
 setType('ingreso');
 applyTheme();
 renderHome();
+
+// Redraw canvas charts on resize (e.g. orientation change) to keep DPR correct
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    drawLineChart();
+    renderHome();
+  }, 150);
+});
 </script>
 </body>
 </html>
