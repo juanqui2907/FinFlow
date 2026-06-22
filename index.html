@@ -324,7 +324,43 @@
   .insight-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
   .insight-text { font-size: 13px; color: #b0b0c0; line-height: 1.6; }
 
-  /* ─── PAGE VISIBILITY ─── */
+  /* ─── SEARCH ─── */
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-input {
+    width: 100%; padding: 11px 16px 11px 40px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; color: var(--text); font-family: var(--font);
+    font-size: 14px; box-sizing: border-box; outline: none;
+    transition: border-color .2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+  .search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 2px 6px; display: none; }
+
+  /* ─── WALLET CHIP EN INICIO ─── */
+  .wallet-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 10px 14px; margin-top: 12px;
+    cursor: pointer; transition: border-color .2s;
+  }
+  .wallet-chip:hover { border-color: var(--accent); }
+  .wallet-chip-icon { font-size: 18px; }
+  .wallet-chip-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; flex: 1; }
+  .wallet-chip-amount { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--accent); }
+
+  /* ─── DONUT INTERACTIVO ─── */
+  .legend-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:10px; cursor:pointer; transition: background .15s; }
+  .legend-item:hover { background: var(--surface2); }
+  .legend-item.active { background: var(--surface2); outline: 1px solid var(--border); }
+  .legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; transition: transform .15s; }
+  .legend-item.active .legend-dot { transform: scale(1.3); }
+  .legend-pct { margin-left:auto; font-size:11px; color:var(--muted); font-family:var(--mono); }
+
+  /* home cat legend interactivo */
+  .cat-legend-item { padding: 4px 6px; border-radius: 10px; cursor: pointer; transition: background .15s; }
+  .cat-legend-item:hover { background: var(--surface2); }
+  .cat-legend-item.active { background: var(--surface2); outline: 1px solid var(--border); }
   .page { display: none; }
   .page.active { display: block; }
 
@@ -593,6 +629,12 @@
       </div>
     </div>
 
+    <div class="wallet-chip" onclick="goto('billetera', document.querySelector('nav button:last-child'))">
+      <span class="wallet-chip-icon">👛</span>
+      <span class="wallet-chip-label">Total billetera</span>
+      <span class="wallet-chip-amount" id="homeWalletTotal">$0</span>
+    </div>
+
     <div class="stat-row">
       <div class="stat-card">
         <div class="stat-icon">📈</div>
@@ -720,6 +762,11 @@
 
   <div class="section">
     <div class="section-label" id="txListLabel">Movimientos — Mar 2026</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="txSearch" type="text" placeholder="Buscar por descripción o categoría…" oninput="filterTxList()">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
+    </div>
     <div class="tx-list" id="allTxList">
       <div class="empty">
         <div class="empty-icon">🧾</div>
@@ -1077,7 +1124,7 @@ const EXPENSE_CATS = ['🏠 Hogar','🍔 Comida','🚗 Transporte','🎬 Entrete
 const CAT_COLORS = ['#c8f135','#7b5ea7','#ff5c5c','#60a5fa','#f97316','#22d3ee','#a78bfa','#f472b6','#34d399','#fbbf24'];
 const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
 
-function drawDonutOn(canvas, entries, total) {
+function drawDonutOn(canvas, entries, total, activeIdx = -1) {
   const dpr = window.devicePixelRatio || 1;
   const cssSize = canvas.getBoundingClientRect().width || parseInt(canvas.getAttribute('width')) || 120;
   canvas.width = Math.round(cssSize * dpr);
@@ -1085,19 +1132,29 @@ function drawDonutOn(canvas, entries, total) {
   canvas.style.width = cssSize + 'px';
   canvas.style.height = cssSize + 'px';
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const size = cssSize, cx = size/2, cy = size/2;
   const r = size/2 - 4, inner = r * 0.62;
-  ctx.clearRect(0,0,size,size);
+  ctx.clearRect(0, 0, size, size);
   let a = -Math.PI/2;
-  entries.forEach(([cat,val],i) => {
-    const slice = (val/total) * Math.PI*2;
-    ctx.beginPath(); ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,a,a+slice); ctx.closePath();
-    ctx.fillStyle = catColor(i); ctx.fill();
+  entries.forEach(([cat, val], i) => {
+    const slice = (val / total) * Math.PI * 2;
+    const highlighted = activeIdx === i;
+    const offset = highlighted ? 5 : 0;
+    const midAngle = a + slice / 2;
+    ctx.save();
+    if (offset) ctx.translate(Math.cos(midAngle) * offset, Math.sin(midAngle) * offset);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, highlighted ? r + 3 : r, a, a + slice);
+    ctx.closePath();
+    ctx.fillStyle = highlighted ? catColor(i) : (activeIdx >= 0 ? catColor(i) + '88' : catColor(i));
+    ctx.fill();
+    ctx.restore();
     a += slice;
   });
-  ctx.beginPath(); ctx.arc(cx,cy,inner,0,Math.PI*2);
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
   ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface').trim() || '#13131a';
   ctx.fill();
 }
@@ -1279,6 +1336,15 @@ function deleteGoal(id) {
 }
 
 // ─── RENDER HOME ───
+function updateHomeWalletChip() {
+  if(typeof BILLETES === 'undefined') return;
+  const billTotal = BILLETES.reduce((s,b) => s + (state.wallet.billetes[b.val]||0)*b.val, 0);
+  const monTotal  = MONEDAS.reduce((s,m)  => s + (state.wallet.monedas[m.val]||0)*m.val,  0);
+  const grand = (state.wallet.places.nequi||0) + (state.wallet.places.pa||0) + billTotal + monTotal;
+  const el = document.getElementById('homeWalletTotal');
+  if(el) el.textContent = fmt(grand);
+}
+
 function renderHome() {
   const txs = state.transactions;
   const inc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
@@ -1301,6 +1367,9 @@ function renderHome() {
   document.getElementById('topExpense').textContent = expTxs.length ? fmt(Math.max(...expTxs.map(t=>t.amount))) : '—';
 
   renderHomeCategories();
+
+  // wallet chip total — BILLETES/MONEDAS pueden no estar definidos en el primer render
+  updateHomeWalletChip();
 
   // recent txs
   const list = document.getElementById('recentTxList');
@@ -1341,6 +1410,8 @@ function formatDate(d) {
 }
 
 // ─── HOME: GASTOS POR CATEGORÍA ───
+let _homeDonutEntries = [], _homeDonutTotal = 0, _homeActiveSlice = -1;
+
 function renderHomeCategories() {
   const now = new Date();
   const curKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -1357,24 +1428,86 @@ function renderHomeCategories() {
   if(!total) {
     legend.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin gastos este mes</div>';
     canvas.getContext('2d').clearRect(0,0,120,120);
+    _homeDonutEntries = []; _homeActiveSlice = -1;
     return;
   }
 
   const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  drawDonutOn(canvas, entries, total);
+  _homeDonutEntries = entries; _homeDonutTotal = total; _homeActiveSlice = -1;
+  drawDonutOn(canvas, entries, total, -1);
 
+  // canvas click: detectar slice tocado
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width/2, cy = rect.height/2;
+    const dx = e.clientX - rect.left - cx, dy = e.clientY - rect.top - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const r = rect.width/2 - 4, inner = r*0.62;
+    if(dist < inner || dist > r+6) { _homeActiveSlice = -1; refreshHomeLegend(); return; }
+    let angle = Math.atan2(dy, dx) - (-Math.PI/2);
+    if(angle < 0) angle += Math.PI*2;
+    let a = 0;
+    for(let i=0; i<entries.length; i++) {
+      const slice = (entries[i][1]/total)*Math.PI*2;
+      if(angle >= a && angle < a+slice) { _homeActiveSlice = _homeActiveSlice===i ? -1 : i; break; }
+      a += slice;
+    }
+    refreshHomeLegend();
+  };
+
+  refreshHomeLegend();
+}
+
+function refreshHomeLegend() {
+  const entries = _homeDonutEntries, total = _homeDonutTotal, active = _homeActiveSlice;
+  const canvas = document.getElementById('homeDonut');
+  const legend = document.getElementById('homeCatLegend');
+  drawDonutOn(canvas, entries, total, active);
   legend.innerHTML = entries.slice(0,5).map(([cat,val],i) => `
-    <div class="cat-legend-item">
+    <div class="cat-legend-item${active===i?' active':''}" onclick="toggleHomeSlice(${i})">
       <div class="cat-legend-top">
         <span class="cat-legend-dot" style="background:${catColor(i)}"></span>
         <span class="cat-legend-name">${cat.substring(3)}</span>
         <span class="cat-legend-pct">${Math.round(val/total*100)}%</span>
       </div>
-      <div class="cat-legend-amt">${fmt(val)}</div>
+      <div class="cat-legend-amt" style="${active===i?'color:'+catColor(i):''}">${fmt(val)}</div>
     </div>`).join('');
 }
 
+function toggleHomeSlice(i) {
+  _homeActiveSlice = _homeActiveSlice===i ? -1 : i;
+  refreshHomeLegend();
+}
+
 // ─── RENDER RESUMEN ───
+// txs del mes actual para búsqueda
+let _currentResumenTxs = [];
+
+function filterTxList() {
+  const q = document.getElementById('txSearch').value.trim().toLowerCase();
+  const clearBtn = document.getElementById('searchClear');
+  clearBtn.style.display = q ? 'block' : 'none';
+  const allList = document.getElementById('allTxList');
+  const label = resumenMonthLabel(resumenDate);
+  if (!q) {
+    allList.innerHTML = _currentResumenTxs.length
+      ? _currentResumenTxs.map((t,i) => txCard(t,i)).join('')
+      : `<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">Sin movimientos en ${label}</div><div class="empty-sub">Navega a otro mes o agrega uno</div></div>`;
+    return;
+  }
+  const filtered = _currentResumenTxs.filter(t =>
+    t.desc.toLowerCase().includes(q) || t.cat.toLowerCase().includes(q)
+  );
+  allList.innerHTML = filtered.length
+    ? filtered.map((t,i) => txCard(t,i)).join('')
+    : `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div><div class="empty-sub">Intenta con otra descripción o categoría</div></div>`;
+}
+
+function clearSearch() {
+  const input = document.getElementById('txSearch');
+  if (input) { input.value = ''; filterTxList(); input.focus(); }
+}
+
 function renderResumen() {
   const key = resumenMonthKey(resumenDate);
   const label = resumenMonthLabel(resumenDate);
@@ -1384,6 +1517,13 @@ function renderResumen() {
   // update header labels
   document.getElementById('resumenMonthLabel').textContent = label;
   document.getElementById('txListLabel').textContent = `Movimientos — ${label}`;
+
+  // limpiar búsqueda al cambiar de mes
+  const searchInput = document.getElementById('txSearch');
+  if (searchInput) { searchInput.value = ''; document.getElementById('searchClear').style.display = 'none'; }
+
+  // guardar txs del mes para filtrado
+  _currentResumenTxs = txs;
 
   // filtered tx list
   const allList = document.getElementById('allTxList');
@@ -1629,28 +1769,62 @@ function saveBudgets() {
   renderResumen();
 }
 
+let _resumenDonutEntries = [], _resumenDonutTotal = 0, _resumenActiveSlice = -1;
+
 function drawDonut(cats) {
   const canvas = document.getElementById('donutChart');
-  const ctx = canvas.getContext('2d');
   const total = Object.values(cats).reduce((s,v)=>s+v,0);
   const legend = document.getElementById('categoryLegend');
 
   if(!total) {
-    ctx.clearRect(0,0,110,110);
+    canvas.getContext('2d').clearRect(0,0,110,110);
     legend.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin gastos aún</div>';
+    _resumenDonutEntries = []; _resumenActiveSlice = -1;
     return;
   }
 
   const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  drawDonutOn(canvas, entries, total);
+  _resumenDonutEntries = entries; _resumenDonutTotal = total; _resumenActiveSlice = -1;
 
+  // canvas click
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width/2, cy = rect.height/2;
+    const dx = e.clientX - rect.left - cx, dy = e.clientY - rect.top - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const r = rect.width/2 - 4, inner = r*0.62;
+    if(dist < inner || dist > r+6) { _resumenActiveSlice = -1; refreshResumenLegend(); return; }
+    let angle = Math.atan2(dy, dx) - (-Math.PI/2);
+    if(angle < 0) angle += Math.PI*2;
+    let a = 0;
+    for(let i=0; i<entries.length; i++) {
+      const slice = (entries[i][1]/total)*Math.PI*2;
+      if(angle >= a && angle < a+slice) { _resumenActiveSlice = _resumenActiveSlice===i ? -1 : i; break; }
+      a += slice;
+    }
+    refreshResumenLegend();
+  };
+
+  refreshResumenLegend();
+}
+
+function refreshResumenLegend() {
+  const entries = _resumenDonutEntries, total = _resumenDonutTotal, active = _resumenActiveSlice;
+  const canvas = document.getElementById('donutChart');
+  const legend = document.getElementById('categoryLegend');
+  drawDonutOn(canvas, entries, total, active);
   legend.innerHTML = entries.slice(0,5).map(([cat,val],i) =>
-    `<div class="legend-item">
+    `<div class="legend-item${active===i?' active':''}" onclick="toggleResumenSlice(${i})">
       <div class="legend-dot" style="background:${catColor(i)}"></div>
       <span style="font-size:12px">${cat.substring(3)}</span>
-      <span class="legend-pct">${Math.round(val/total*100)}%</span>
+      <span class="legend-pct" style="${active===i?'color:'+catColor(i)+';font-weight:700':''}">${Math.round(val/total*100)}%</span>
     </div>`
   ).join('');
+}
+
+function toggleResumenSlice(i) {
+  _resumenActiveSlice = _resumenActiveSlice===i ? -1 : i;
+  refreshResumenLegend();
 }
 
 function drawBarChart() {
@@ -1937,6 +2111,9 @@ function recalcWallet() {
   set('sum-pa',           pa);
   set('sum-efectivo',     efectivo);
   set('walletGrandTotalAmt', grand);
+
+  // actualizar chip en inicio
+  updateHomeWalletChip();
 }
 
 // ─── INIT ───
@@ -1950,6 +2127,7 @@ document.getElementById('txDate').value = today();
 setType('ingreso');
 applyTheme();
 renderHome();
+updateHomeWalletChip(); // BILLETES ya definidos en este punto
 
 // Redraw canvas charts on resize (e.g. orientation change) to keep DPR correct
 let _resizeTimer;
