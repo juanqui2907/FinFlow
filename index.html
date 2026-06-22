@@ -1124,14 +1124,18 @@ const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
 
 function drawDonutOn(canvas, entries, total, activeIdx = -1) {
   const dpr = window.devicePixelRatio || 1;
-  // getBoundingClientRect().width es 0 si el elemento está hidden (display:none)
-  // Usar el atributo width como fallback seguro
   const bcrW = canvas.getBoundingClientRect().width;
-  const cssSize = bcrW > 0 ? bcrW : (parseInt(canvas.getAttribute('width')) || 120);
-  canvas.width = Math.round(cssSize * dpr);
-  canvas.height = Math.round(cssSize * dpr);
-  canvas.style.width = cssSize + 'px';
-  canvas.style.height = cssSize + 'px';
+  // Si el canvas está oculto (hidden page), bcrW = 0 — NO sobreescribir dimensiones
+  // Usar el tamaño que ya tiene el canvas (o el atributo width como base)
+  const cssSize = bcrW > 0 ? bcrW : (canvas.style.width ? parseFloat(canvas.style.width) : (parseInt(canvas.getAttribute('width')) || 120));
+  
+  // Solo actualizar dimensiones si el canvas es visible o no tiene tamaño aún
+  if (bcrW > 0) {
+    canvas.width = Math.round(cssSize * dpr);
+    canvas.height = Math.round(cssSize * dpr);
+    canvas.style.width = cssSize + 'px';
+    canvas.style.height = cssSize + 'px';
+  }
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const size = cssSize, cx = size/2, cy = size/2;
@@ -1202,7 +1206,7 @@ function goto(page, el) {
   if(page==='resumen') renderResumen();
   if(page==='futuro') renderFuturo();
   if(page==='metas') renderMetas();
-  if(page==='home') renderHome();
+  if(page==='home') requestAnimationFrame(renderHome);
   if(page==='billetera') renderBilletera();
   window.scrollTo(0,0);
 }
@@ -2169,8 +2173,9 @@ let _resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(() => {
-    drawLineChart();
-    renderHome();
+    // Solo redibujar si la página está activa (visible)
+    if (document.getElementById('page-home')?.classList.contains('active')) renderHome();
+    if (document.getElementById('page-resumen')?.classList.contains('active')) drawLineChart();
   }, 150);
 });
 </script>
