@@ -1350,6 +1350,18 @@ function updateHomeWalletChip() {
   if(el) el.textContent = fmt(grand);
 }
 
+function animateCounter(el, from, to, duration, formatter) {
+  if (!el) return;
+  const ease = t => 1 - Math.pow(1 - t, 3); // ease out cubic
+  const start = performance.now();
+  function tick(now) {
+    const t = ease(Math.min((now - start) / duration, 1));
+    el.textContent = formatter(from + (to - from) * t);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 function renderHome() {
   const txs = state.transactions;
   const inc = txs.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
@@ -1357,10 +1369,15 @@ function renderHome() {
   const bal = inc - exp;
   const rate = inc>0 ? Math.round((bal/inc)*100) : 0;
 
-  document.getElementById('totalBalance').textContent = fmt(bal);
-  document.getElementById('totalInc').textContent = fmt(inc);
-  document.getElementById('totalExp').textContent = fmt(exp);
-  document.getElementById('savingsRate').textContent = rate + '%';
+  // animación solo si los valores cambiaron
+  const prev = renderHome._prev || { bal: 0, inc: 0, exp: 0, rate: 0 };
+  renderHome._prev = { bal, inc, exp, rate };
+
+  const D = 700; // duración ms
+  animateCounter(document.getElementById('totalBalance'), prev.bal, bal, D, v => fmt(Math.round(v)));
+  animateCounter(document.getElementById('totalInc'),    prev.inc, inc, D * 0.85, v => fmt(Math.round(v)));
+  animateCounter(document.getElementById('totalExp'),    prev.exp, exp, D * 0.85, v => fmt(Math.round(v)));
+  animateCounter(document.getElementById('savingsRate'), prev.rate, rate, D, v => Math.round(v) + '%');
 
   const balEl = document.getElementById('balanceChange');
   balEl.textContent = bal>=0 ? `▲ ${rate}% de tus ingresos ahorrado` : '▼ Gastos superan ingresos';
