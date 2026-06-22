@@ -627,12 +627,10 @@
           <div class="val" id="savingsRate">0%</div>
         </div>
       </div>
-    </div>
-
-    <div class="wallet-chip" onclick="goto('billetera', document.querySelector('nav button:last-child'))">
-      <span class="wallet-chip-icon">👛</span>
-      <span class="wallet-chip-label">Total billetera</span>
-      <span class="wallet-chip-amount" id="homeWalletTotal">$0</span>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="goto('billetera', document.querySelector('nav button:last-child'))">
+        <span style="font-size:11px;color:rgba(0,0,0,.5);text-transform:uppercase;letter-spacing:.07em">👛 Billetera</span>
+        <span style="font-family:var(--mono);font-size:17px;font-weight:800;color:#0a0a0f" id="homeWalletTotal">$0</span>
+      </div>
     </div>
 
     <div class="stat-row">
@@ -668,7 +666,7 @@
   </div>
 
   <div class="section">
-    <div class="section-label">Movimientos recientes</div>
+    <div class="section-label" id="recentTxLabel">Movimientos recientes</div>
     <div class="tx-list" id="recentTxList">
       <div class="empty">
         <div class="empty-icon">💸</div>
@@ -1126,7 +1124,10 @@ const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
 
 function drawDonutOn(canvas, entries, total, activeIdx = -1) {
   const dpr = window.devicePixelRatio || 1;
-  const cssSize = canvas.getBoundingClientRect().width || parseInt(canvas.getAttribute('width')) || 120;
+  // getBoundingClientRect().width es 0 si el elemento está hidden (display:none)
+  // Usar el atributo width como fallback seguro
+  const bcrW = canvas.getBoundingClientRect().width;
+  const cssSize = bcrW > 0 ? bcrW : (parseInt(canvas.getAttribute('width')) || 120);
   canvas.width = Math.round(cssSize * dpr);
   canvas.height = Math.round(cssSize * dpr);
   canvas.style.width = cssSize + 'px';
@@ -1371,11 +1372,25 @@ function renderHome() {
   // wallet chip total — BILLETES/MONEDAS pueden no estar definidos en el primer render
   updateHomeWalletChip();
 
-  // recent txs
+  renderRecentTxList();
+}
+
+function renderRecentTxList(filterCat) {
   const list = document.getElementById('recentTxList');
-  const recent = txs.slice(0,8);
+  const label = document.getElementById('recentTxLabel');
+  const txs = state.transactions;
+  const recent = filterCat
+    ? txs.filter(t => t.cat === filterCat).slice(0, 12)
+    : txs.slice(0, 8);
+
+  if (label) {
+    label.textContent = filterCat
+      ? `Movimientos — ${filterCat.substring(3)}`
+      : 'Movimientos recientes';
+  }
+
   if(!recent.length) {
-    list.innerHTML = `<div class="empty"><div class="empty-icon">💸</div><div class="empty-title">Sin movimientos</div><div class="empty-sub">Toca + para agregar uno</div></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-icon">💸</div><div class="empty-title">${filterCat ? 'Sin movimientos en esta categoría' : 'Sin movimientos'}</div><div class="empty-sub">Toca + para agregar uno</div></div>`;
     return;
   }
   list.innerHTML = recent.map((t,i) => txCard(t,i)).join('');
@@ -1472,6 +1487,10 @@ function refreshHomeLegend() {
       </div>
       <div class="cat-legend-amt" style="${active===i?'color:'+catColor(i):''}">${fmt(val)}</div>
     </div>`).join('');
+
+  // filtrar movimientos recientes según categoría activa
+  const activeCat = active >= 0 ? entries[active][0] : null;
+  renderRecentTxList(activeCat);
 }
 
 function toggleHomeSlice(i) {
@@ -1820,6 +1839,22 @@ function refreshResumenLegend() {
       <span class="legend-pct" style="${active===i?'color:'+catColor(i)+';font-weight:700':''}">${Math.round(val/total*100)}%</span>
     </div>`
   ).join('');
+
+  // filtrar lista de movimientos con el buscador
+  const searchInput = document.getElementById('txSearch');
+  const clearBtn = document.getElementById('searchClear');
+  if (searchInput) {
+    if (active >= 0) {
+      const catName = entries[active][0].substring(3); // sin emoji
+      searchInput.value = catName;
+      clearBtn.style.display = 'block';
+      filterTxList();
+    } else {
+      searchInput.value = '';
+      clearBtn.style.display = 'none';
+      filterTxList();
+    }
+  }
 }
 
 function toggleResumenSlice(i) {
