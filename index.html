@@ -57,6 +57,51 @@
     flex-shrink: 0;
   }
 
+  /* ─── SETTINGS PANEL ─── */
+  .settings-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    backdrop-filter: blur(4px);
+  }
+  .settings-overlay.open { opacity: 1; pointer-events: all; }
+  .settings-panel {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 201;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 0 0 40px;
+    transform: translateY(100%);
+    transition: transform .3s cubic-bezier(.32,.72,0,1);
+    max-height: 82vh; overflow-y: auto;
+  }
+  .settings-panel.open { transform: translateY(0); }
+  .settings-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 20px; }
+  .settings-title { font-size: 18px; font-weight: 800; padding: 0 20px 16px; border-bottom: 1px solid var(--border); }
+  .settings-section { padding: 18px 20px 4px; }
+  .settings-section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px; }
+  
+  /* tema toggle */
+  .theme-toggle-row { display: flex; background: var(--surface2); border-radius: 14px; padding: 4px; gap: 4px; }
+  .theme-opt { flex: 1; padding: 8px; border-radius: 10px; border: none; background: none; color: var(--muted); font-size: 13px; font-family: var(--font); cursor: pointer; transition: all .2s; font-weight: 600; }
+  .theme-opt.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+
+  /* colores accent */
+  .accent-colors { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .accent-swatch {
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; transition: transform .15s, border-color .15s;
+    position: relative;
+  }
+  .accent-swatch:hover { transform: scale(1.1); }
+  .accent-swatch.active { border-color: var(--text); transform: scale(1.1); }
+  .accent-swatch.active::after {
+    content: '✓'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900;
+    color: #0a0a0f;
+  }
+
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
   body {
@@ -237,7 +282,7 @@
     background: var(--surface2); color: var(--muted); font-family: var(--font);
     font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
   }
-  .type-btn.active-inc { background: rgba(200,241,53,.15); border-color: var(--green); color: var(--green); }
+  .type-btn.active-inc { background: rgba(200,241,53,.15); border-color: #c8f135; color: #c8f135; }
   .type-btn.active-exp { background: rgba(255,92,92,.15); border-color: var(--red); color: var(--red); }
   .field { margin-bottom: 14px; }
   .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 6px; }
@@ -361,6 +406,26 @@
   .cat-legend-item { padding: 4px 6px; border-radius: 10px; cursor: pointer; transition: background .15s; }
   .cat-legend-item:hover { background: var(--surface2); }
   .cat-legend-item.active { background: var(--surface2); outline: 1px solid var(--border); }
+  /* ─── ADD PLACE ─── */
+  .place-add-btn {
+    width: 100%; padding: 12px; margin-top: 8px;
+    background: none; border: 1.5px dashed var(--border);
+    border-radius: 16px; color: var(--muted); font-size: 14px;
+    font-family: var(--font); cursor: pointer; transition: border-color .2s, color .2s;
+  }
+  .place-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-opt {
+    width: 40px; height: 40px; border-radius: 10px; font-size: 20px;
+    border: 2px solid transparent; background: var(--surface2); cursor: pointer;
+    transition: border-color .15s, transform .15s;
+  }
+  .icon-opt.active { border-color: var(--accent); transform: scale(1.1); }
+  .color-opt {
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; transition: transform .15s, border-color .15s;
+  }
+  .color-opt.active { border-color: var(--text); transform: scale(1.15); }
+
   .page { display: none; }
   .page.active { display: block; }
 
@@ -603,7 +668,7 @@
       <div class="page-title">Tu Balance</div>
       <div style="display:flex;align-items:center;gap:8px">
         <button class="month-pill" id="monthDisplay">Mar 2026</button>
-        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+        <button class="theme-btn" id="themeBtn" onclick="openSettings()">⚙️</button>
       </div>
     </div>
   </header>
@@ -890,9 +955,9 @@
         <option value="🏠 Hogar">🏠 Hogar</option>
         <option value="🍔 Comida">🍔 Comida</option>
         <option value="🚗 Transporte">🚗 Transporte</option>
-        <option value="🎬 Entretenimiento">🎬 Entretenimiento</option>
+        
         <option value="💊 Salud">💊 Salud</option>
-        <option value="📚 Educación">📚 Educación</option>
+        <option value="📱 Suscripciones">📱 Suscripciones</option>
         <option value="👕 Ropa">👕 Ropa</option>
         <option value="💰 Ahorro">💰 Ahorro</option>
         <option value="📦 Otros">📦 Otros</option>
@@ -902,7 +967,7 @@
       <label>Fecha</label>
       <input type="date" id="txDate">
     </div>
-    <button class="submit-btn" onclick="saveTx()">Guardar movimiento</button>
+    <button class="submit-btn inc" id="saveTxBtn" onclick="saveTx()">Guardar movimiento</button>
   </div>
 </div>
 
@@ -1016,9 +1081,9 @@
         <option value="🏠 Hogar">🏠 Hogar</option>
         <option value="🍔 Comida">🍔 Comida</option>
         <option value="🚗 Transporte">🚗 Transporte</option>
-        <option value="🎬 Entretenimiento">🎬 Entretenimiento</option>
+        
         <option value="💊 Salud">💊 Salud</option>
-        <option value="📚 Educación">📚 Educación</option>
+        <option value="📱 Suscripciones">📱 Suscripciones</option>
         <option value="👕 Ropa">👕 Ropa</option>
         <option value="💰 Ahorro">💰 Ahorro</option>
         <option value="📦 Otros">📦 Otros</option>
@@ -1028,7 +1093,7 @@
       <label>Fecha</label>
       <input type="date" id="editDate">
     </div>
-    <button class="submit-btn" onclick="saveEdit()">Guardar cambios</button>
+    <button class="submit-btn inc" id="saveEditBtn" onclick="saveEdit()">Guardar cambios</button>
   </div>
 </div>
 <!-- ╚══════════════╝ -->
@@ -1073,14 +1138,7 @@
   <div class="section" style="margin-bottom:24px">
     <div class="section-label">Resumen</div>
     <div class="wallet-summary-card">
-      <div class="ws-row">
-        <span class="ws-label">💜 Nequi</span>
-        <span class="ws-val" id="sum-nequi">$0</span>
-      </div>
-      <div class="ws-row">
-        <span class="ws-label">🟠 Pa</span>
-        <span class="ws-val" id="sum-pa">$0</span>
-      </div>
+      <div id="walletSummaryPlaces"></div>
       <div class="ws-row ws-efectivo">
         <span class="ws-label">💵 Efectivo <span class="ws-sub">(billetes + monedas)</span></span>
         <span class="ws-val" id="sum-efectivo">$0</span>
@@ -1091,6 +1149,56 @@
         <span id="walletGrandTotalAmt">$0</span>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- MODAL AGREGAR CUENTA -->
+<div class="settings-overlay" id="addPlaceOverlay" onclick="closeAddPlace()"></div>
+<div class="settings-panel" id="addPlaceModal">
+  <div class="settings-handle"></div>
+  <div class="settings-title">＋ Nueva cuenta</div>
+  <div class="settings-section">
+    <div class="settings-section-label">Nombre</div>
+    <input id="newPlaceName" type="text" placeholder="Ej: Daviplata, Bancolombia…"
+      style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:15px;font-family:var(--font);outline:none;box-sizing:border-box">
+  </div>
+  <div class="settings-section" style="margin-top:4px">
+    <div class="settings-section-label">Ícono</div>
+    <div id="iconPicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <input type="hidden" id="newPlaceIcon" value="🏦">
+  </div>
+  <div class="settings-section" style="margin-top:4px">
+    <div class="settings-section-label">Color</div>
+    <div id="colorPicker" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+    <input type="hidden" id="newPlaceColor" value="#60a5fa">
+  </div>
+  <div class="settings-section" style="margin-top:8px;padding-bottom:8px">
+    <button onclick="confirmAddPlace()"
+      style="width:100%;padding:14px;background:var(--accent);color:#0a0a0f;border:none;border-radius:16px;font-size:15px;font-weight:800;font-family:var(--font);cursor:pointer">
+      Agregar cuenta
+    </button>
+  </div>
+</div>
+
+<!-- ╔══════════════╗ -->
+<!-- ║   AJUSTES    ║ -->
+<!-- ╚══════════════╝ -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-handle"></div>
+  <div class="settings-title">⚙️ Ajustes</div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Tema</div>
+    <div class="theme-toggle-row">
+      <button class="theme-opt" id="themeOptDark" onclick="setTheme('dark')">🌙 Oscuro</button>
+      <button class="theme-opt" id="themeOptLight" onclick="setTheme('light')">☀️ Claro</button>
+    </div>
+  </div>
+
+  <div class="settings-section" style="margin-top:8px">
+    <div class="settings-section-label">Color de la tarjeta</div>
+    <div class="accent-colors" id="accentSwatches"></div>
   </div>
 </div>
 
@@ -1118,7 +1226,7 @@ let state = JSON.parse(localStorage.getItem('finflow') || '{"transactions":[],"g
 let currentType = 'ingreso';
 if(!state.budgets) state.budgets = {};
 
-const EXPENSE_CATS = ['🏠 Hogar','🍔 Comida','🚗 Transporte','🎬 Entretenimiento','💊 Salud','📚 Educación','👕 Ropa','📦 Otros'];
+const EXPENSE_CATS = ['🏠 Hogar','🍔 Comida','🚗 Transporte','💊 Salud','📱 Suscripciones','👕 Ropa','📦 Otros'];
 const CAT_COLORS = ['#c8f135','#7b5ea7','#ff5c5c','#60a5fa','#f97316','#22d3ee','#a78bfa','#f472b6','#34d399','#fbbf24'];
 const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
 
@@ -1164,22 +1272,74 @@ function drawDonutOn(canvas, entries, total, activeIdx = -1) {
   ctx.fill();
 }
 
+// ─── ACCENT COLORS ───
+const ACCENT_COLORS = [
+  { hex: '#c8f135', name: 'Lima'      },
+  { hex: '#60a5fa', name: 'Azul'      },
+  { hex: '#f97316', name: 'Naranja'   },
+  { hex: '#f472b6', name: 'Rosa'      },
+  { hex: '#34d399', name: 'Menta'     },
+  { hex: '#a78bfa', name: 'Lavanda'   },
+  { hex: '#fbbf24', name: 'Amarillo'  },
+  { hex: '#ff5c5c', name: 'Rojo'      },
+  { hex: '#22d3ee', name: 'Cyan'      },
+  { hex: '#ffffff', name: 'Blanco'    },
+];
+
+let currentAccent = localStorage.getItem('finflow-accent') || '#c8f135';
+
+function applyAccent(hex) {
+  currentAccent = hex;
+  document.documentElement.style.setProperty('--accent', hex);
+  // --green se queda siempre en #c8f135 (semántico: ingreso = verde lima)
+  localStorage.setItem('finflow-accent', hex);
+  document.querySelectorAll('.accent-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.hex === hex);
+  });
+}
+
+function renderAccentSwatches() {
+  const container = document.getElementById('accentSwatches');
+  if(!container) return;
+  container.innerHTML = ACCENT_COLORS.map(c => `
+    <div class="accent-swatch${c.hex === currentAccent ? ' active' : ''}"
+      style="background:${c.hex}"
+      data-hex="${c.hex}"
+      title="${c.name}"
+      onclick="applyAccent('${c.hex}')"></div>
+  `).join('');
+}
+
 // ─── THEME ───
 let isDark = localStorage.getItem('finflow-theme') !== 'light';
+
 function applyTheme() {
   document.body.classList.toggle('light', !isDark);
-  const btn = document.getElementById('themeBtn');
-  if(btn) btn.textContent = isDark ? '🌙' : '☀️';
   localStorage.setItem('finflow-theme', isDark ? 'dark' : 'light');
+  // sync botones del panel
+  document.getElementById('themeOptDark')?.classList.toggle('active', isDark);
+  document.getElementById('themeOptLight')?.classList.toggle('active', !isDark);
 }
-function toggleTheme() {
-  isDark = !isDark;
+
+function setTheme(mode) {
+  isDark = mode === 'dark';
   applyTheme();
-  // Redibujar para que el centro del donut tome el color del tema nuevo
   setTimeout(() => {
     renderHome();
     if (document.getElementById('page-resumen')?.classList.contains('active')) renderResumen();
   }, 0);
+}
+
+// ─── SETTINGS PANEL ───
+function openSettings() {
+  renderAccentSwatches();
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('settingsPanel').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
 }
 
 // ─── RESUMEN MONTH FILTER ───
@@ -1229,6 +1389,8 @@ function setType(t) {
   currentType = t;
   document.getElementById('btnInc').className = 'type-btn' + (t==='ingreso'?' active-inc':'');
   document.getElementById('btnExp').className = 'type-btn' + (t==='gasto'?' active-exp':'');
+  const btn = document.getElementById('saveTxBtn');
+  if(btn) { btn.classList.toggle('inc', t==='ingreso'); btn.classList.toggle('exp', t==='gasto'); }
   // Update cat options
   const cat = document.getElementById('txCat');
   if(t==='ingreso') {
@@ -1292,6 +1454,8 @@ function setEditType(t) {
   editType = t;
   document.getElementById('editBtnInc').className = 'type-btn' + (t==='ingreso'?' active-inc':'');
   document.getElementById('editBtnExp').className = 'type-btn' + (t==='gasto'?' active-exp':'');
+  const btn = document.getElementById('saveEditBtn');
+  if(btn) { btn.classList.toggle('inc', t==='ingreso'); btn.classList.toggle('exp', t==='gasto'); }
 }
 
 function saveEdit() {
@@ -1345,7 +1509,8 @@ function updateHomeWalletChip() {
   if(typeof BILLETES === 'undefined') return;
   const billTotal = BILLETES.reduce((s,b) => s + (state.wallet.billetes[b.val]||0)*b.val, 0);
   const monTotal  = MONEDAS.reduce((s,m)  => s + (state.wallet.monedas[m.val]||0)*m.val,  0);
-  const grand = (state.wallet.places.nequi||0) + (state.wallet.places.pa||0) + billTotal + monTotal;
+  const digital   = state.wallet.places.reduce((s,p) => s + (p.balance||0), 0);
+  const grand = digital + billTotal + monTotal;
   const el = document.getElementById('homeWalletTotal');
   if(el) el.textContent = fmt(grand);
 }
@@ -1373,7 +1538,7 @@ function renderHome() {
   const prev = renderHome._prev || { bal: 0, inc: 0, exp: 0, rate: 0 };
   renderHome._prev = { bal, inc, exp, rate };
 
-  const D = 700; // duración ms
+  const D = 1400; // duración ms
   animateCounter(document.getElementById('totalBalance'), prev.bal, bal, D, v => fmt(Math.round(v)));
   animateCounter(document.getElementById('totalInc'),    prev.inc, inc, D * 0.85, v => fmt(Math.round(v)));
   animateCounter(document.getElementById('totalExp'),    prev.exp, exp, D * 0.85, v => fmt(Math.round(v)));
@@ -2052,10 +2217,30 @@ function renderFutureCategories(months) {
 }
 
 // ─── BILLETERA ───
-const PLACES = [
+// ─── CUENTAS DIGITALES DINÁMICAS ───
+const DEFAULT_PLACES = [
   { id: 'nequi', name: 'Nequi', icon: '💜', color: '#7b5ea7' },
   { id: 'pa',    name: 'Pa',    icon: '🟠', color: '#f97316' },
 ];
+const PLACE_ICONS = ['💜','🟠','🟢','🔵','🟡','⚫','🏦','💳','📱','💰','🏧','💎'];
+const PLACE_COLORS = ['#7b5ea7','#f97316','#22d3ee','#60a5fa','#fbbf24','#6b6b80','#34d399','#f472b6','#ff5c5c','#c8f135'];
+
+// migración: asegurar que places sea array
+if (!state.wallet) {
+  state.wallet = { places: [], billetes: {}, monedas: {} };
+}
+if (!Array.isArray(state.wallet.places)) {
+  // migrar objeto viejo {nequi:x, pa:y} a array
+  const old = state.wallet.places;
+  state.wallet.places = DEFAULT_PLACES.map(p => ({
+    ...p, balance: parseFloat(old[p.id]) || 0
+  }));
+  save();
+}
+if (state.wallet.places.length === 0) {
+  state.wallet.places = DEFAULT_PLACES.map(p => ({ ...p, balance: 0 }));
+  save();
+}
 
 const BILLETES = [
   { val: 100000, label: '$100.000' },
@@ -2082,9 +2267,9 @@ if (state.wallet.places && state.wallet.places.efectivo !== undefined) {
 }
 
 function renderBilletera() {
-  // cuentas digitales
+  // cuentas digitales dinámicas
   const placesEl = document.getElementById('walletPlaces');
-  placesEl.innerHTML = PLACES.map(p => `
+  placesEl.innerHTML = state.wallet.places.map((p, i) => `
     <div class="place-card">
       <div class="place-icon" style="background:${p.color}22">${p.icon}</div>
       <div class="place-info">
@@ -2092,13 +2277,18 @@ function renderBilletera() {
         <div class="place-input-row">
           <input class="place-input" type="number" inputmode="numeric"
             placeholder="0"
-            value="${state.wallet.places[p.id] || ''}"
-            oninput="updatePlace('${p.id}', this.value)">
+            value="${p.balance || ''}"
+            oninput="updatePlace(${i}, this.value)">
         </div>
       </div>
-      <div class="place-total" id="place-total-${p.id}">${fmt(state.wallet.places[p.id]||0)}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="place-total" id="place-total-${i}">${fmt(p.balance||0)}</div>
+        <button onclick="deletePlace(${i})" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px" title="Eliminar">🗑</button>
+      </div>
     </div>
-  `).join('');
+  `).join('') + `
+    <button class="place-add-btn" onclick="openAddPlace()">＋ Agregar cuenta</button>
+  `;
 
   // billetes
   const billGrid = document.getElementById('billeteGrid');
@@ -2135,11 +2325,67 @@ function renderBilletera() {
   recalcWallet();
 }
 
-function updatePlace(id, val) {
-  state.wallet.places[id] = parseFloat(val)||0;
-  document.getElementById('place-total-'+id).textContent = fmt(state.wallet.places[id]);
+function updatePlace(idx, val) {
+  state.wallet.places[idx].balance = parseFloat(val) || 0;
+  const el = document.getElementById('place-total-' + idx);
+  if(el) el.textContent = fmt(state.wallet.places[idx].balance);
   recalcWallet();
   save();
+}
+
+function deletePlace(idx) {
+  if(state.wallet.places.length <= 1) return;
+  state.wallet.places.splice(idx, 1);
+  save();
+  renderBilletera();
+  recalcWallet();
+}
+
+// ─── ADD PLACE MODAL ───
+function openAddPlace() {
+  document.getElementById('addPlaceOverlay').classList.add('open');
+  document.getElementById('addPlaceModal').classList.add('open');
+  document.getElementById('newPlaceName').value = '';
+  document.getElementById('newPlaceIcon').value = '🏦';
+  document.getElementById('newPlaceColor').value = '#60a5fa';
+  renderIconPicker();
+  renderColorPicker();
+}
+function closeAddPlace() {
+  document.getElementById('addPlaceOverlay').classList.remove('open');
+  document.getElementById('addPlaceModal').classList.remove('open');
+}
+function renderIconPicker() {
+  document.getElementById('iconPicker').innerHTML = PLACE_ICONS.map(ic => `
+    <button class="icon-opt${document.getElementById('newPlaceIcon')?.value===ic?' active':''}"
+      onclick="selectIcon('${ic}')">${ic}</button>
+  `).join('');
+}
+function renderColorPicker() {
+  document.getElementById('colorPicker').innerHTML = PLACE_COLORS.map(c => `
+    <div class="color-opt${document.getElementById('newPlaceColor')?.value===c?' active':''}"
+      style="background:${c}" data-c="${c}"
+      onclick="selectColor('${c}')"></div>
+  `).join('');
+}
+function selectIcon(ic) {
+  document.getElementById('newPlaceIcon').value = ic;
+  renderIconPicker();
+}
+function selectColor(c) {
+  document.getElementById('newPlaceColor').value = c;
+  renderColorPicker();
+}
+function confirmAddPlace() {
+  const name = document.getElementById('newPlaceName').value.trim();
+  if(!name) { document.getElementById('newPlaceName').focus(); return; }
+  const icon = document.getElementById('newPlaceIcon').value || '🏦';
+  const color = document.getElementById('newPlaceColor').value || '#60a5fa';
+  const id = 'custom_' + Date.now();
+  state.wallet.places.push({ id, name, icon, color, balance: 0 });
+  save();
+  closeAddPlace();
+  renderBilletera();
 }
 
 function updateDenom(type, val, qty) {
@@ -2156,17 +2402,25 @@ function recalcWallet() {
   const billTotal = BILLETES.reduce((s,b) => s + (state.wallet.billetes[b.val]||0)*b.val, 0);
   const monTotal  = MONEDAS.reduce((s,m)  => s + (state.wallet.monedas[m.val]||0)*m.val,  0);
   const efectivo  = billTotal + monTotal;
-  const nequi     = state.wallet.places.nequi || 0;
-  const pa        = state.wallet.places.pa    || 0;
-  const grand     = nequi + pa + efectivo;
+  const digitalTotal = state.wallet.places.reduce((s,p) => s + (p.balance||0), 0);
+  const grand = digitalTotal + efectivo;
 
   const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = fmt(val); };
-  set('billeteSubtotal',  billTotal);
-  set('monedaSubtotal',   monTotal);
-  set('sum-nequi',        nequi);
-  set('sum-pa',           pa);
-  set('sum-efectivo',     efectivo);
+  set('billeteSubtotal', billTotal);
+  set('monedaSubtotal',  monTotal);
+  set('sum-efectivo',    efectivo);
   set('walletGrandTotalAmt', grand);
+
+  // resumen dinámico de cuentas
+  const summaryEl = document.getElementById('walletSummaryPlaces');
+  if(summaryEl) {
+    summaryEl.innerHTML = state.wallet.places.map(p =>
+      `<div class="ws-row">
+        <span class="ws-label">${p.icon} ${p.name}</span>
+        <span class="ws-val">${fmt(p.balance||0)}</span>
+      </div>`
+    ).join('');
+  }
 
   // actualizar chip en inicio
   updateHomeWalletChip();
@@ -2182,6 +2436,7 @@ document.getElementById('greetingText').textContent = greet;
 document.getElementById('txDate').value = today();
 setType('ingreso');
 applyTheme();
+applyAccent(currentAccent);
 renderHome();
 updateHomeWalletChip(); // BILLETES ya definidos en este punto
 
