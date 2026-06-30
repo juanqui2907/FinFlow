@@ -296,6 +296,19 @@
   .field input:focus, .field select:focus { border-color: var(--accent); }
   .field select option { background: var(--surface2); }
   .amount-field input { font-size: 24px; font-weight: 600; }
+
+  /* ─── SUGERENCIA DE CATEGORÍA ─── */
+  .cat-sugg-row { display: flex; align-items: center; gap: 8px; min-height: 28px; margin-top: 8px; }
+  .cat-sugg-chip {
+    font-size: 12px; padding: 5px 11px; border-radius: 999px; font-weight: 600;
+    background: rgba(200,241,53,.14); color: var(--accent);
+    border: 1px solid rgba(200,241,53,.25);
+    cursor: pointer; animation: suggFadeIn .18s ease;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .cat-sugg-chip:active { transform: scale(.96); }
+  .cat-sugg-label { font-size: 11px; color: var(--muted); }
+  @keyframes suggFadeIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:translateY(0); } }
   .submit-btn {
     width: 100%; padding: 16px; background: var(--accent);
     border: none; border-radius: 16px; font-family: var(--font);
@@ -945,11 +958,12 @@
     </div>
     <div class="field">
       <label>Descripción</label>
-      <input type="text" id="txDesc" placeholder="Ej: Salario, Mercado...">
+      <input type="text" id="txDesc" placeholder="Ej: Salario, Mercado..." oninput="suggestCategory()" autocomplete="off">
+      <div class="cat-sugg-row" id="catSuggRow"></div>
     </div>
     <div class="field">
       <label>Categoría</label>
-      <select id="txCat">
+      <select id="txCat" onchange="learnFromManualSelection()">
         <option value="💼 Trabajo">💼 Trabajo</option>
         <option value="⭐ Saldo inicial">⭐ Saldo inicial</option>
         <option value="🏠 Hogar">🏠 Hogar</option>
@@ -1227,6 +1241,106 @@ let currentType = 'ingreso';
 if(!state.budgets) state.budgets = {};
 
 const EXPENSE_CATS = ['🏠 Hogar','🍔 Comida','🚗 Transporte','💊 Salud','📱 Suscripciones','👕 Ropa','📦 Otros'];
+
+// ─── CLASIFICACIÓN AUTOMÁTICA DE GASTOS ───
+const CAT_DICCIONARIO = {
+  '🍔 Comida': ['mcdonalds', 'mcdonald', 'kfc', 'rappi', 'didi food', 'burger', 'subway', 'dominos', 'pizza',
+    'mercado', 'supermercado', 'exito', 'éxito', 'olimpica', 'olímpica', 'jumbo', 'carulla', 'd1', 'ara',
+    'restaurante', 'almuerzo', 'desayuno', 'cena', 'panaderia', 'panadería', 'cafeteria', 'cafetería',
+    'frutas', 'verduras', 'carniceria', 'carnicería', 'tienda'],
+  '🚗 Transporte': ['uber', 'didi', 'cabify', 'indriver', 'taxi', 'gasolina', 'combustible', 'parqueadero',
+    'peaje', 'metro', 'transmilenio', 'transmetro', 'bus', 'buseta', 'mototaxi', 'mecanico', 'mecánico', 'lavado carro'],
+  '🏠 Hogar': ['arriendo', 'alquiler', 'administracion', 'administración', 'luz', 'agua', 'gas natural',
+    'energia', 'energía', 'aseo', 'ferreteria', 'ferretería', 'homecenter', 'easy', 'pintuco'],
+  '💊 Salud': ['farmacia', 'droguria', 'droguería', 'medico', 'médico', 'cruz verde', 'la rebaja',
+    'colsubsidio salud', 'medicina', 'consulta', 'odontologo', 'odontólogo', 'eps'],
+  '📱 Suscripciones': ['netflix', 'spotify', 'claro', 'movistar', 'tigo', 'disney', 'hbo', 'youtube premium',
+    'amazon prime', 'icloud', 'google one', 'directv', 'paramount', 'chatgpt', 'claude'],
+  '👕 Ropa': ['zara', 'h&m', 'falabella', 'gef', 'arturo calle', 'studio f', 'koaj', 'leonisa', 'tennis', 'zapatos'],
+  '💼 Trabajo': ['salario', 'sueldo', 'pago nomina', 'pago nómina', 'honorarios', 'freelance', 'consultoria', 'consultoría'],
+};
+
+// aprendizaje: { "texto buscado en minúsculas": "🍔 Comida" }
+function getLearnedMap() {
+  return state.learnedCats || {};
+}
+function saveLearnedMap(map) {
+  state.learnedCats = map;
+  save();
+}
+
+function classifyDescription(text) {
+  const t = text.toLowerCase().trim();
+  if (!t || t.length < 2) return null;
+
+  // 1. primero buscar en lo aprendido (prioridad: coincidencias más específicas/largas primero)
+  const learned = getLearnedMap();
+  const learnedKeys = Object.keys(learned).sort((a,b) => b.length - a.length);
+  for (const key of learnedKeys) {
+    if (t.includes(key)) return { cat: learned[key], source: 'aprendido' };
+  }
+
+  // 2. luego el diccionario fijo
+  for (const cat in CAT_DICCIONARIO) {
+    for (const word of CAT_DICCIONARIO[cat]) {
+      if (t.includes(word)) return { cat, source: 'diccionario' };
+    }
+  }
+  return null;
+}
+
+let _lastSuggestedCat = null;
+let _suggestionApplied = false;
+
+function suggestCategory() {
+  const desc = document.getElementById('txDesc').value;
+  const row = document.getElementById('catSuggRow');
+  const result = classifyDescription(desc);
+
+  if (!result) {
+    row.innerHTML = '';
+    _lastSuggestedCat = null;
+    return;
+  }
+
+  _lastSuggestedCat = result.cat;
+  const label = result.source === 'aprendido' ? '✨ Aprendido de tus gastos' : '✨ Sugerido';
+  row.innerHTML = `
+    <div class="cat-sugg-chip" onclick="applySuggestion()">
+      <span>${result.cat}</span>
+    </div>
+    <span class="cat-sugg-label">${label} · toca para aplicar</span>
+  `;
+
+  // si el tipo es gasto, auto-aplicar directo (no estorba, el usuario puede cambiarla)
+  if (currentType === 'gasto') {
+    document.getElementById('txCat').value = result.cat;
+  }
+}
+
+function applySuggestion() {
+  if (!_lastSuggestedCat) return;
+  document.getElementById('txCat').value = _lastSuggestedCat;
+  const row = document.getElementById('catSuggRow');
+  row.innerHTML = `<span class="cat-sugg-label">✓ Categoría aplicada</span>`;
+}
+
+// cuando el usuario elige manualmente una categoría distinta a la sugerida, aprender
+function learnFromManualSelection() {
+  const desc = document.getElementById('txDesc').value.toLowerCase().trim();
+  const chosenCat = document.getElementById('txCat').value;
+  if (!desc || desc.length < 3) return;
+
+  // solo aprender si es distinto a lo que el diccionario ya sabría, o si no había sugerencia
+  if (chosenCat !== _lastSuggestedCat) {
+    const map = getLearnedMap();
+    // usar la primera palabra significativa (3+ letras) como clave de aprendizaje
+    const words = desc.split(/\s+/).filter(w => w.length >= 3);
+    const key = words.length ? words.slice(0, 2).join(' ') : desc;
+    map[key] = chosenCat;
+    saveLearnedMap(map);
+  }
+}
 const CAT_COLORS = ['#c8f135','#7b5ea7','#ff5c5c','#60a5fa','#f97316','#22d3ee','#a78bfa','#f472b6','#34d399','#fbbf24'];
 const catColor = i => CAT_COLORS[i % CAT_COLORS.length];
 
@@ -1376,6 +1490,8 @@ document.getElementById('fabBtn').onclick = () => {
   document.getElementById('txDate').value = today();
   document.getElementById('txAmount').value = '';
   document.getElementById('txDesc').value = '';
+  document.getElementById('catSuggRow').innerHTML = '';
+  _lastSuggestedCat = null;
   openModal('txModal');
 };
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -1403,14 +1519,28 @@ function saveTx() {
   const desc = document.getElementById('txDesc').value.trim();
   if(!amt || amt<=0) { alert('Ingresa un monto válido'); return; }
   if(!desc) { alert('Ingresa una descripción'); return; }
+  const finalCat = document.getElementById('txCat').value;
   state.transactions.unshift({
     id: Date.now(),
     type: currentType,
     amount: amt,
     desc,
-    cat: document.getElementById('txCat').value,
+    cat: finalCat,
     date: document.getElementById('txDate').value
   });
+
+  // aprender de esta categorización final, sin importar cómo se eligió
+  if (desc.length >= 3) {
+    const map = getLearnedMap();
+    const words = desc.toLowerCase().split(/\s+/).filter(w => w.length >= 3);
+    const key = words.length ? words.slice(0, 2).join(' ') : desc.toLowerCase();
+    map[key] = finalCat;
+    saveLearnedMap(map);
+  }
+
+  _lastSuggestedCat = null;
+  document.getElementById('catSuggRow').innerHTML = '';
+
   save();
   closeModal('txModal');
   renderHome();
